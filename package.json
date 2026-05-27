@@ -1,0 +1,12 @@
+{
+  "name": "ysy-repository",
+  "private": true,
+  "version": "1.0.0",
+  "workspaces": [
+    "backend"
+  ],
+  "scripts": {
+    "dev": "npm --prefix backend run dev",
+    "start": "npm --prefix backend run start"
+  }
+}
