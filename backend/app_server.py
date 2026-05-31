@@ -13,12 +13,10 @@ import tempfile
 import uuid
 import shutil
 import threading
-import time
 from contextlib import contextmanager
 from pathlib import Path
 
 import yaml
-import requests as http_requests
 from flask import Flask, request, jsonify, send_file, send_from_directory, Response, stream_with_context
 from llm_client import (
     API_TYPE_CCB,
@@ -2788,11 +2786,6 @@ def _should_pass_through_preextract(expert_text: str, uploaded_material_text: st
     if _uploaded_expert_material_is_substantive(uploaded_material_text):
         return False
     return _text_is_explicit_no_opinion(expert_text)
-
-
-def _expert_text_indicates_no_revision(expert_text: str) -> bool:
-    """兼容旧调用：与 _should_pass_through_preextract 等价（无上传材料时）。"""
-    return _should_pass_through_preextract(expert_text, "")
 
 
 def _alignment_llm_guard_rules() -> str:

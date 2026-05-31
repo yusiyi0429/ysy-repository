@@ -1476,10 +1476,6 @@ async function saveModel() {
   }
 }
 
-function addModel() {
-  return saveModel();
-}
-
 async function deleteModel(name) {
   if (!confirm('确定删除模型 "' + name + '"？')) return;
   try {
@@ -2413,11 +2409,6 @@ async function step3ConfirmAsIs() {
   }
 }
 
-// Keep backward compat: old function name used by onclick in some places
-async function step3SkillAlign() {
-  return step3GeneratePreview();
-}
-
 // ═══════════════════════════════════════════════════════════════════
 // Step 5: Compile & Quality & AI Refine
 // ═══════════════════════════════════════════════════════════════════
@@ -2684,10 +2675,6 @@ async function step5Quality() {
   } catch (e) {
     renderOutput('s5-output', '<div class="error-list"><div class="error-item">' + escapeHtml(e.message) + '</div></div>');
   }
-}
-
-async function editStep5Output() {
-  previewStep5Skill();
 }
 
 // Markdown Editor for SKILL.md

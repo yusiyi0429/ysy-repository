@@ -47,8 +47,3 @@ def get_release_info() -> dict:
         # 兼容旧前端/脚本仅读取 build 字段
         "build": STEP2_EXCEL_BUILD,
     }
-
-
-def format_image_tag(app_version: str, platform_slug: str, timestamp: str) -> str:
-    """标准镜像 tag：{app_version}-{platform}-{yyyyMMdd-HHmm}"""
-    return f"{app_version}-{platform_slug}-{timestamp}"
