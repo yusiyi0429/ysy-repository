@@ -27,6 +27,10 @@ DOWNLOAD_ALLOWED_PREFIXES = (
     "quality_report_",
     "report_",
     "cache_",
+    # 新 Skill 产出报告
+    "pattern_mining_",
+    "gap_analysis_",
+    "freshness_audit_",
 )
 
 STEP_OUTPUT_KEYS_BY_STEP = {

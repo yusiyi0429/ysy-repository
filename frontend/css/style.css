@@ -142,6 +142,9 @@ a { color: var(--red); text-decoration: none; }
 .skill-card-icon.icon-blue { background: #eff6ff; color: #3b82f6; }
 .skill-card-icon.icon-purple { background: #faf5ff; color: #8b5cf6; }
 .skill-card-icon.icon-orange { background: #fff7ed; color: #ea580c; }
+.skill-card-icon.icon-teal { background: #f0fdfa; color: #0d9488; }
+.skill-card-icon.icon-blue { background: #eff6ff; color: #3b82f6; }
+.skill-card-icon.icon-green { background: #f0fdf4; color: #16a34a; }
 
 .skill-card-info { flex: 1; min-width: 0; }
 .skill-card-name { font-size: 14px; font-weight: 600; color: var(--text); }
@@ -1842,3 +1845,151 @@ a { color: var(--red); text-decoration: none; }
 .align-result-actions {
   display: flex; gap: 8px; margin-top: 16px;
 }
+
+/* ===== Step2 输入模式切换 ===== */
+.s2-mode-tabs {
+  display: flex; gap: 0; margin-bottom: 16px; border-radius: var(--radius);
+  border: 1px solid var(--border); overflow: hidden;
+}
+.s2-mode-tab {
+  flex: 1; padding: 8px 12px; font-size: 13px; font-weight: 500;
+  background: #fff; border: none; cursor: pointer; transition: all 0.2s;
+  color: var(--text-secondary); font-family: var(--font-cn);
+}
+.s2-mode-tab:not(:last-child) { border-right: 1px solid var(--border); }
+.s2-mode-tab.active { background: var(--red); color: #fff; }
+.s2-mode-tab:hover:not(.active) { background: #fef0f0; }
+.s2-mode-panel { }
+.s2-mode-panel.hidden { display: none !important; }
+
+/* ===== 案例复盘表单 ===== */
+.s2-case-field { margin-bottom: 12px; }
+.s2-case-field label { display: block; font-size: 13px; font-weight: 600; margin-bottom: 4px; color: var(--text); }
+.s2-case-field textarea,
+.s2-case-field input[type=text] {
+  width: 100%; padding: 8px 10px; border: 1px solid var(--border); border-radius: var(--radius);
+  font-size: 13px; font-family: var(--font-cn); resize: vertical; transition: border-color 0.2s;
+}
+.s2-case-field textarea:focus,
+.s2-case-field input[type=text]:focus { border-color: var(--red); outline: none; }
+
+/* ===== 对齐追问卡片 ===== */
+.tacit-followup {
+  margin-top: 8px; padding: 10px 12px; background: #fef7e0; border-left: 3px solid var(--warning);
+  border-radius: 0 var(--radius) var(--radius) 0; font-size: 13px;
+}
+.tacit-followup-label {
+  font-weight: 600; color: #8b6914; margin-bottom: 4px;
+}
+.tacit-followup textarea {
+  width: 100%; min-height: 48px; padding: 6px 8px; border: 1px solid var(--border);
+  border-radius: var(--radius); font-size: 12px; font-family: var(--font-cn);
+  resize: vertical; margin-bottom: 6px;
+}
+.tacit-followup-actions { display: flex; gap: 6px; justify-content: flex-end; }
+.tacit-followup-skip {
+  font-size: 11px; color: var(--text-muted); background: none; border: none;
+  cursor: pointer; text-decoration: underline;
+}
+.tacit-followup-save {
+  font-size: 12px; padding: 4px 14px; background: var(--warning); color: #fff;
+  border: none; border-radius: var(--radius); cursor: pointer; font-weight: 600;
+}
+.tacit-annotation-badge {
+  display: inline-block; font-size: 10px; padding: 1px 6px;
+  background: #fef7e0; color: #8b6914; border-radius: 10px; margin-left: 6px;
+}
+.tacit-annotation-list { margin-top: 16px; }
+.tacit-annotation-item {
+  padding: 10px 12px; background: #fef7e0; border-radius: var(--radius);
+  margin-bottom: 8px; font-size: 13px;
+}
+.tacit-annotation-item .ta-note-id { font-weight: 600; color: var(--red); margin-right: 8px; }
+.tacit-annotation-item .ta-question { color: var(--text-secondary); font-size: 11px; margin-bottom: 2px; }
+.tacit-annotation-item .ta-answer { color: var(--text); }
+
+/* ===== Skill 详情页增强 ===== */
+.skill-detail-section {
+  margin-bottom: 16px; padding-bottom: 12px;
+  border-bottom: 1px solid var(--border-light);
+}
+.skill-detail-section:last-child { border-bottom: none; margin-bottom: 0; }
+.skill-detail-section-title {
+  font-size: 13px; font-weight: 700; color: var(--red);
+  margin-bottom: 8px; display: flex; align-items: center; gap: 6px;
+}
+.skill-detail-section-body { font-size: 12px; color: var(--text-secondary); line-height: 1.8; }
+.skill-detail-section-body p { margin-bottom: 8px; }
+.skill-detail-section-body p:last-child { margin-bottom: 0; }
+.skill-detail-list {
+  list-style: none; padding: 0; margin: 0;
+}
+.skill-detail-list li {
+  padding: 4px 0; font-size: 12px; color: var(--text-secondary);
+  padding-left: 16px; position: relative;
+}
+.skill-detail-list li::before {
+  content: '•'; position: absolute; left: 2px; color: var(--red);
+}
+.skill-io-item {
+  margin-bottom: 10px; background: #f8f9fa; border-radius: var(--radius);
+  padding: 10px 12px;
+}
+.skill-io-label { font-size: 11px; font-weight: 700; margin-bottom: 4px; }
+.skill-io-label-in { color: #3b82f6; }
+.skill-io-label-out { color: #16a34a; }
+.skill-io-content { font-size: 12px; color: var(--text-secondary); line-height: 1.6; }
+.skill-detail-meta {
+  display: flex; flex-wrap: wrap; gap: 12px; margin-top: 12px;
+  padding-top: 12px; border-top: 1px solid var(--border-light);
+}
+.skill-detail-meta-item { font-size: 11px; color: var(--text-muted); }
+
+/* ===== Step2 Skill 卡片选择器 ===== */
+.s2-skill-cards {
+  display: flex; gap: 6px; flex-wrap: wrap;
+}
+.s2-skill-card {
+  flex: 1; min-width: 90px; padding: 8px 10px;
+  border: 2px solid var(--border); border-radius: var(--radius);
+  cursor: pointer; transition: all 0.2s; text-align: center;
+  background: #fff; display: flex; flex-direction: column; align-items: center; gap: 2px;
+}
+.s2-skill-card:hover { border-color: var(--red-light); background: #fef5f5; }
+.s2-skill-card.active { border-color: var(--red); background: #fef0f0; }
+.s2-skill-card-icon { font-size: 18px; }
+.s2-skill-card-name { font-size: 12px; font-weight: 700; color: var(--text); }
+.s2-skill-card-desc { font-size: 10px; color: var(--text-muted); }
+.s2-conditional { }
+.s2-info-card {
+  display: flex; align-items: flex-start; gap: 10px; padding: 10px 12px;
+  background: #f0f9ff; border: 1px solid #bae6fd; border-radius: var(--radius);
+}
+.s2-info-card-icon { font-size: 20px; flex-shrink: 0; }
+.s2-info-card-text { font-size: 12px; color: var(--text-secondary); line-height: 1.6; }
+
+/* ===== 修订上下文侧栏 ===== */
+.revision-context {
+  margin-bottom: 12px; background: #fafafa; border: 1px solid var(--border);
+  border-radius: var(--radius); overflow: hidden;
+}
+.revision-context-header {
+  font-size: 12px; font-weight: 700; padding: 8px 12px;
+  background: var(--red); color: #fff;
+}
+.revision-context-body { padding: 8px 12px; }
+.rc-warning {
+  padding: 8px 10px; margin-bottom: 6px; background: #fff8f0;
+  border-left: 3px solid var(--warning); border-radius: 0 var(--radius) var(--radius) 0;
+  font-size: 12px;
+}
+.rc-insight {
+  padding: 8px 10px; margin-bottom: 6px; background: #f0f7ff;
+  border-left: 3px solid #3b82f6; border-radius: 0 var(--radius) var(--radius) 0;
+  font-size: 12px;
+}
+.rc-title { font-weight: 600; margin-bottom: 4px; }
+.rc-text { color: var(--text-secondary); margin-bottom: 2px; }
+.rc-list { margin: 4px 0 0 16px; font-size: 11px; color: var(--text-muted); }
+.rc-list li { margin-bottom: 2px; }
+

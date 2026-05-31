@@ -280,43 +280,123 @@ fetch('/api/version').then(function(r){return r.json()}).then(function(v){
                   <div class="s2-prev-empty">尚未检测到上一步输出，请先完成场景锚定</div>
                 </div>
               </div>
-              <!-- Knowledge source upload -->
-              <div class="form-group">
-                <label>知识来源文件</label>
-                <input type="file" id="s2-source-file" accept=".txt,.md,.docx,.pdf">
-                <span id="s2-file-name" class="s2-file-name"></span>
-                <div class="file-hint">上传待萃取的制度文件、操作手册、案例库（TXT/MD/DOCX/PDF）</div>
+
+              <!-- 输入模式切换 -->
+              <div class="s2-mode-tabs" id="s2-mode-tabs">
+                <button class="s2-mode-tab active" data-mode="doc" onclick="switchStep2Mode('doc')">📄 文档萃取</button>
+                <button class="s2-mode-tab" data-mode="case" onclick="switchStep2Mode('case')">📋 案例复盘</button>
               </div>
-              <div class="form-group">
-                <label>或粘贴文档内容</label>
-                <textarea id="s2-doc-text" rows="4" placeholder="将制度文件/操作手册的文本粘贴至此..."></textarea>
+
+              <!-- 模式一：文档萃取 -->
+              <div class="s2-mode-panel" id="s2-panel-doc">
+                <div class="form-group">
+                  <label>知识来源文件</label>
+                  <input type="file" id="s2-source-file" accept=".txt,.md,.docx,.pdf">
+                  <span id="s2-file-name" class="s2-file-name"></span>
+                  <div class="file-hint">上传待萃取的制度文件、操作手册、案例库（TXT/MD/DOCX/PDF）</div>
+                </div>
+                <div class="form-group">
+                  <label>或粘贴文档内容</label>
+                  <textarea id="s2-doc-text" rows="4" placeholder="将制度文件/操作手册的文本粘贴至此..."></textarea>
+                </div>
+              </div>
+
+              <!-- 模式二：案例复盘 -->
+              <div class="s2-mode-panel hidden" id="s2-panel-case">
+                <div class="form-group">
+                  <label>案例标题 <span style="color:var(--red)">*</span></label>
+                  <input type="text" id="s2-case-title" placeholder="如：某芯片设计企业流水异常预警">
+                </div>
+                <div class="form-group">
+                  <label>背景 / 情境 <span style="color:var(--red)">*</span></label>
+                  <textarea id="s2-case-context" rows="3" placeholder="当时是什么样的业务场景？涉及哪些关键信息？你是怎么发现这个问题的？"></textarea>
+                </div>
+                <div class="form-group">
+                  <label>你当时怎么判断的？采取了什么行动？</label>
+                  <textarea id="s2-case-decision" rows="3" placeholder="你做了什么决策？依据是什么？（可以是数据、经验、直觉，越真实越好）"></textarea>
+                </div>
+                <div class="form-group">
+                  <label>结果是什么？</label>
+                  <textarea id="s2-case-outcome" rows="2" placeholder="最终结果如何？和你的预期一致吗？有什么意外吗？"></textarea>
+                </div>
+                <div class="form-group">
+                  <label>如果重来一次，你会怎么做？</label>
+                  <textarea id="s2-case-redo" rows="2" placeholder="有没有更好的处理方式？当时忽略了什么信号？"></textarea>
+                </div>
+                <div class="form-group">
+                  <label>这次经历让你养成了什么习惯 / 条件反射？</label>
+                  <textarea id="s2-case-habit" rows="2" placeholder="比如：从此以后每次看报表都会先翻到某一页、每次见新客户都会先问某一个问题..."></textarea>
+                </div>
+                <div class="file-hint" style="margin-top:4px">案例复盘帮你把"只有你知道"的判断经验沉淀为团队可复用的隐性信号</div>
               </div>
             </div>
           </div>
           <div class="col col-center">
             <div class="col-header"><div class="col-icon">M</div><div class="col-header-text"><div class="col-label-cn">操作</div><div class="col-label-en">Action</div></div></div>
             <div class="col-content action-area">
+              <!-- Skill 卡片选择器（替代下拉框） -->
               <div class="form-group" style="margin-bottom:12px">
+                <label>选择能力</label>
+                <div class="s2-skill-cards" id="s2-skill-cards">
+                  <div class="s2-skill-card active" data-skill="knowledge-extraction" onclick="selectStep2Skill('knowledge-extraction')">
+                    <span class="s2-skill-card-icon">🔍</span>
+                    <span class="s2-skill-card-name">知识萃取</span>
+                    <span class="s2-skill-card-desc">文档→结构化知识</span>
+                  </div>
+                  <div class="s2-skill-card" data-skill="knowledge-pattern-mining" onclick="selectStep2Skill('knowledge-pattern-mining')">
+                    <span class="s2-skill-card-icon">🔬</span>
+                    <span class="s2-skill-card-name">模式发现</span>
+                    <span class="s2-skill-card-desc">跨案例交叉分析</span>
+                  </div>
+                  <div class="s2-skill-card" data-skill="knowledge-gap-analysis" onclick="selectStep2Skill('knowledge-gap-analysis')">
+                    <span class="s2-skill-card-icon">🎯</span>
+                    <span class="s2-skill-card-name">盲区检测</span>
+                    <span class="s2-skill-card-desc">Schema覆盖率</span>
+                  </div>
+                </div>
+                <select id="s2-skill-select" class="hidden">
+                  <option value="">-- 选择 Skill --</option>
+                </select>
+              </div>
+
+              <!-- 萃取风格（仅知识萃取时显示） -->
+              <div class="form-group s2-conditional" id="s2-group-style" style="margin-bottom:12px">
                 <label>萃取风格</label>
                 <select id="s2-extract-style">
-                  <option value="标准萃取">标准萃取</option>
-                  <option value="深度萃取">深度萃取</option>
-                  <option value="精简萃取">精简萃取</option>
+                  <option value="标准萃取">标准萃取（8-22条）</option>
+                  <option value="深度萃取">深度萃取（12-40条）</option>
+                  <option value="精简萃取">精简萃取（5-10条）</option>
                 </select>
-                <div class="file-hint">标准: 8-22条平衡覆盖；深度: 12-40条并尽量补全字段；精简: 5-10条，仅保留高价值条目</div>
               </div>
+
+              <!-- 模式发现多文件上传（仅模式发现时显示） -->
+              <div class="form-group s2-conditional hidden" id="s2-group-pattern-files" style="margin-bottom:12px">
+                <label>案例文件（可多选，至少2个）</label>
+                <input type="file" id="s2-pattern-files" accept=".txt,.md" multiple>
+                <div class="file-hint">选择至少2个案例复盘文件进行交叉分析。支持 TXT/MD 格式</div>
+              </div>
+              <div class="form-group s2-conditional hidden" id="s2-group-pattern-text" style="margin-bottom:12px">
+                <label>或粘贴多个案例文本</label>
+                <textarea id="s2-pattern-text" rows="4" placeholder="粘贴多个案例复盘文本，案例之间用「===」分隔&#10;&#10;===&#10;&#10;案例2内容..."></textarea>
+              </div>
+
+              <!-- 盲区检测说明（仅盲区检测时显示） -->
+              <div class="form-group s2-conditional hidden" id="s2-group-gap-info" style="margin-bottom:12px">
+                <div class="s2-info-card">
+                  <div class="s2-info-card-icon">🎯</div>
+                  <div class="s2-info-card-text">
+                    <strong>自动读取当前流水线的知识Excel</strong><br>
+                    <span class="file-hint">对比Step1的Schema列定义与Step2实际填充的条目，无需额外输入</span>
+                  </div>
+                </div>
+              </div>
+
               <div class="form-group" style="margin-bottom:12px">
                 <label>选择模型</label>
                 <select id="s2-model"></select>
               </div>
-              <div class="form-group" style="margin-bottom:12px">
-                <label>引用 Skill</label>
-                <select id="s2-skill-select">
-                  <option value="">-- 选择 Skill --</option>
-                </select>
-              </div>
               <button class="action-btn" id="s2-skill-extract" onclick="step2SkillExtract()">
-                <span class="action-icon">&#9654;</span> 执行
+                <span class="action-icon">&#9654;</span> <span id="s2-btn-text">执行知识萃取</span>
               </button>
               <div class="step-readiness info" id="s2-readiness">请补全 Skill、模型与文档输入后执行</div>
               <div class="action-note">选择 Skill 后点击执行，自动从文档中提取结构化知识条目</div>
@@ -367,6 +447,11 @@ fetch('/api/version').then(function(r){return r.json()}).then(function(v){
                   <div class="s2-prev-empty-icon">📋</div>
                   <div>暂无 Step2 萃取稿输出</div>
                   <div class="s2-prev-empty-hint">请先完成知识萃取节点</div>
+                </div>
+                <!-- 修订上下文侧栏 -->
+                <div class="revision-context" id="s3-revision-context" style="display:none;">
+                  <div class="revision-context-header">📡 修订上下文</div>
+                  <div class="revision-context-body" id="s3-revision-context-body"></div>
                 </div>
                 <div class="form-group" style="margin-top:12px;">
                   <label>对话记录（专家与模型）</label>
@@ -529,6 +614,13 @@ fetch('/api/version').then(function(r){return r.json()}).then(function(v){
                 <span class="action-icon">&#9654;</span> 生成交付物
               </button>
               <div class="action-note">基于知识对齐稿确定性转换；Skill 含 openclaw.skill.json 清单，可直接接入 OpenClaw</div>
+              <div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--border);">
+                <div class="file-hint" style="margin-bottom:6px">📋 知识库健康检查</div>
+                <button class="action-btn small-btn secondary-btn" id="s5-freshness-btn" onclick="step5FreshnessAudit()" style="width:100%;justify-content:center;">
+                  🔄 知识保鲜度审计
+                </button>
+                <div class="file-hint" style="margin-top:4px">检测知识时效性、置信度衰减和被案例突破的规则</div>
+              </div>
             </div>
           </div>
           <!-- 输出 -->
