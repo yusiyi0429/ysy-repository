@@ -16,7 +16,12 @@
       "Bash(curl -s http://127.0.0.1:5001/api/step1/schema)",
       "Bash(kill %1)",
       "Bash(python -c ' *)",
-      "Bash(git config *)"
+      "Bash(git config *)",
+      "Bash(pip install *)",
+      "Bash(python app_server.py --host 127.0.0.1 --port 5000)",
+      "Bash(timeout 3 bash -c 'until curl -s http://127.0.0.1:5000/api/health > /dev/null 2>&1; do sleep 0.5; done; curl -s http://127.0.0.1:5000/api/health')",
+      "Bash(curl -s http://127.0.0.1:5000/api/health)",
+      "Bash(start http://127.0.0.1:5000)"
     ]
   }
 }

@@ -572,7 +572,7 @@ document.addEventListener('DOMContentLoaded', () => {
       });
     }
   });
-  loadStep1DefaultTemplates();
+  loadStep1SchemaAndTemplates();
   setupFormAutoSave();
   // Preload model list so step selects are usable without opening model panel first.
   loadModels();
@@ -696,18 +696,8 @@ async function rollbackToStep(step) {
   }
 }
 
-/* ===== Server Status ===== */
-async function checkServer() {
-  const el = document.getElementById('server-status');
-  try {
-    const resp = await fetch(API_BASE + '/api/health', { signal: AbortSignal.timeout(3000) });
-    if (resp.ok) {
-      el.innerHTML = '<span class="status-dot online"></span>服务就绪';
-    } else { throw new Error(); }
-  } catch {
-    el.innerHTML = '<span class="status-dot offline"></span>离线模式';
-  }
-}
+/* ===== Server Status（委托到 index.html 内联脚本，含 30s 自动重试） ===== */
+checkServer = function() { /* no-op: 由 index.html 内联脚本处理 */ };
 checkServer();
 
 /* ===== Utility ===== */
@@ -755,10 +745,37 @@ function statRow(label, value, cls) {
   return '<div class="stat-row"><span class="stat-label">' + label + '</span><span class="stat-value ' + (cls||'') + '">' + value + '</span></div>';
 }
 
-async function apiCall(endpoint, formData) {
-  const resp = await fetch(API_BASE + endpoint, { method: 'POST', body: formData });
-  const text = await resp.text();
-  try { return JSON.parse(text); } catch { return { raw: text }; }
+async function apiCall(endpoint, formData, timeoutMs = 120000) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    const resp = await fetch(API_BASE + endpoint, { method: 'POST', body: formData, signal: controller.signal });
+    const text = await resp.text();
+    try { return JSON.parse(text); } catch { return { raw: text }; }
+  } catch (e) {
+    if (e.name === 'AbortError') {
+      return { status: 'error', error: '请求超时，请检查网络后重试' };
+    }
+    throw e;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+/** 包裹异步操作：自动禁用/恢复按钮，防止重复点击 */
+async function withButtonLock(btnEl, fn) {
+  if (!btnEl) return fn();
+  if (btnEl._locked) return;
+  btnEl._locked = true;
+  btnEl.disabled = true;
+  const origText = btnEl.innerHTML;
+  try {
+    return await fn();
+  } finally {
+    btnEl.disabled = false;
+    btnEl.innerHTML = origText;
+    btnEl._locked = false;
+  }
 }
 
 async function apiCallJSON(endpoint, body, method = 'POST', timeoutMs = 0) {
@@ -938,7 +955,7 @@ function clearCurrentPipeline() {
     if (s4Empty) s4Empty.style.display = 'flex';
     if (s4Edit) s4Edit.style.display = 'none';
 
-    loadStep1DefaultTemplates();
+    loadStep1SchemaAndTemplates();
     showToast('流水线已清空');
     // Reload current panel
     switchPanel(currentPipeline.current_step);
@@ -1519,6 +1536,11 @@ function step1GetSubScenarios() {
 }
 
 async function step1Generate() {
+  const btn = document.getElementById('s1-generate');
+  if (!btn || btn._locked) return;
+  btn.disabled = true;
+  btn._locked = true;
+  try {
   const scenarioName = document.getElementById('s1-scenario-name').value.trim();
   const scenarioContent = document.getElementById('s1-scenario-content').value.trim();
   const templateFile = document.getElementById('s1-template-file').files[0];
@@ -1620,7 +1642,6 @@ async function step1Generate() {
         html += `<button class="action-btn small-btn secondary-btn" onclick="previewStep5File('${escapeHtml(step1MdFile)}','Step1 骨架 Markdown 预览')">预览/编辑 Markdown</button>`;
       }
       if (!mdFlow && result.excel_download_url) {
-        html += '<a class="action-btn small-btn secondary-btn" href="' + API_BASE + result.excel_download_url + '" download>下载配套 Excel</a>';
         html += '<button class="action-btn small-btn secondary-btn" onclick="step1PreviewExcel(\'' + (result.excel_file || result.file_name) + '\')">预览 Excel</button>';
       }
       html += '</div>';
@@ -1633,6 +1654,10 @@ async function step1Generate() {
     renderOutput('s1-output', html);
   } catch (e) {
     renderOutput('s1-output', '<div class="error-list"><div class="error-item">' + escapeHtml(e.message) + '</div></div>');
+  }
+  } finally {
+    btn.disabled = false;
+    btn._locked = false;
   }
 }
 
@@ -1786,6 +1811,8 @@ function resolveStep2DownloadInfo(result) {
   return { dlName, dlUrl };
 }
 async function step2SkillExtract() {
+  const btn = document.getElementById('s2-skill-extract');
+  if (!btn || btn._locked) return;
   const skillId = document.getElementById('s2-skill-select').value;
   const model = resolveModelName('s2-model');
   const style = document.getElementById('s2-extract-style').value;
@@ -1799,7 +1826,7 @@ async function step2SkillExtract() {
     return;
   }
 
-  const btn = document.getElementById('s2-skill-extract');
+  btn._locked = true;
   btn.disabled = true;
   btn.innerHTML = '<span class="action-icon">&#9203;</span> 执行中...';
   renderLoading('s2-output');
@@ -1915,6 +1942,7 @@ async function step2SkillExtract() {
     renderOutput('s2-output', '<h4>错误</h4><div class="error-list"><div class="error-item">' + escapeHtml(e.message) + '</div></div>');
   } finally {
     btn.disabled = false;
+    btn._locked = false;
     btn.innerHTML = '<span class="action-icon">&#9654;</span> 执行';
   }
 }
@@ -3347,6 +3375,25 @@ async function saveExcelEditor() {
     if (saveBtn) { saveBtn.disabled = false; saveBtn.textContent = '保存'; }
   }
 }
+
+// ── 委托公共函数到 utils.js / state.js 模块 ──
+;(function() {
+  var A = window.App;
+  if (!A) return;
+  // 工具函数委托（utils.js 在 app.js 之前加载）
+  if (A.escapeHtml)    { escapeHtml = A.escapeHtml; showToast = A.showToast; copyTextToClipboard = A.copyTextToClipboard; }
+  if (A.qualityBar)    { qualityBar = A.qualityBar; statRow = A.statRow; }
+  if (A.apiCall)       { apiCall = A.apiCall; apiCallJSON = A.apiCallJSON; withButtonLock = A.withButtonLock; }
+  if (A.renderOutput)  { renderOutput = A.renderOutput; renderLoading = A.renderLoading; }
+  // 状态管理器委托
+  if (A.PipelineState) {
+    // scheduleFormSave 委托到 PipelineState（防抖已改为 2 秒）
+    var _origScheduleFormSave = scheduleFormSave;
+    scheduleFormSave = function(step) { A.PipelineState.scheduleFormSave(step, collectAllStepsFormData); };
+    // persistPipeline 委托
+    persistPipeline = function(extraStepData, extraFields) { return A.PipelineState.persist(extraStepData, extraFields); };
+  }
+})();
 
 // Load pipeline overview on startup
 loadPipelineOverview();

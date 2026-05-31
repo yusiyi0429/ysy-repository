@@ -4,15 +4,23 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>隐性知识显性化 · 四步法萃取流水线</title>
-<link rel="preconnect" href="https://fonts.googleapis.cn">
-<link rel="preconnect" href="https://fonts.gstatic.cn" crossorigin>
-<link href="https://fonts.googleapis.cn/css2?family=Noto+Sans+SC:wght@300;400;500;700&family=Roboto+Mono:wght@400;500&display=swap" rel="stylesheet">
+<!-- Google Fonts: 异步加载，内网不可用时静默回退系统字体 -->
+<link rel="preconnect" href="https://fonts.googleapis.cn" crossorigin>
+<link rel="preload" as="style" href="https://fonts.googleapis.cn/css2?family=Noto+Sans+SC:wght@300;400;500;700&family=Roboto+Mono:wght@400;500&display=swap" onload="this.onload=null;this.rel='stylesheet'" onerror="this.remove()">
+<noscript><link rel="stylesheet" href="https://fonts.googleapis.cn/css2?family=Noto+Sans+SC:wght@300;400;500;700&family=Roboto+Mono:wght@400;500&display=swap"></noscript>
 <!-- Luckysheet 离线资源 -->
 <link rel="stylesheet" href="vendor/luckysheet/plugins/css/pluginsCss.css">
 <link rel="stylesheet" href="vendor/luckysheet/plugins/plugins.css">
 <link rel="stylesheet" href="vendor/luckysheet/css/luckysheet.css">
 <link rel="stylesheet" href="vendor/luckysheet/assets/iconfont/iconfont.css">
-<link rel="stylesheet" href="css/style.css?v=20260529free">
+<link rel="stylesheet" href="css/style.css"></link>
+<script>
+// CSS 版本号由服务端 /api/version 动态注入，确保升级后缓存失效
+fetch('/api/version').then(function(r){return r.json()}).then(function(v){
+  var link=document.querySelector('link[href="css/style.css"]');
+  if(link)link.href='css/style.css?v='+(v.app_version||'dev');
+}).catch(function(){});
+</script>
 </head>
 <body>
 
@@ -587,7 +595,27 @@
 <script src="vendor/jquery/jquery.min.js"></script>
 <script src="vendor/luckysheet/plugins/js/plugin.js"></script>
 <script src="vendor/luckysheet/luckysheet.umd.js"></script>
-<script src="js/excel-luckysheet.js?v=20260528f"></script>
-<script src="js/app.js?v=20260529uxboost"></script>
+<script src="js/state.js"></script>
+<script src="js/utils.js"></script>
+<script src="js/excel-luckysheet.js"></script>
+<script src="js/app.js"></script>
+<script>
+// 服务健康检查：失败后每 30 秒自动重试
+(function checkWithRetry() {
+  var el = document.getElementById('server-status');
+  fetch('/api/health', { signal: AbortSignal.timeout(3000) })
+    .then(function(r) {
+      if (r.ok) {
+        el.innerHTML = '<span class="status-dot online"></span>服务就绪';
+        return;
+      }
+      throw new Error();
+    })
+    .catch(function() {
+      el.innerHTML = '<span class="status-dot offline"></span>离线模式';
+      setTimeout(checkWithRetry, 30000);
+    });
+})();
+</script>
 </body>
 </html>

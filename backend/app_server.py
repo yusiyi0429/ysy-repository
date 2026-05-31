@@ -3191,7 +3191,10 @@ def _run_knowledge_revision(pipeline_id: str, expert_text: str, style: str, mode
 
 
 def _execute_knowledge_revision():
-    """知识修订 Skill 执行：基于 Step2 萃取稿 + 专家意见生成修订稿。"""
+    """知识修订 Skill 执行：基于 Step2 萃取稿 + 专家意见生成修订稿。
+
+    专家无意见时，直接透传 Step2 萃取稿作为对齐输出（不调用 LLM）。
+    """
     skill_id = request.form.get("skill_id", "knowledge-revision")
     info = SKILL_REGISTRY.get(skill_id, {})
     pipeline_id = request.form.get("pipeline_id", "")
@@ -3204,6 +3207,12 @@ def _execute_knowledge_revision():
         return jsonify({"status": "error", "error": "知识修订技能未启用"})
     if not pipeline_id:
         return jsonify({"status": "error", "error": "缺少 pipeline_id"})
+
+    # 加载上传材料（会议纪要/访谈记录等）
+    uploaded_material_text = _load_align_expert_upload_text(
+        uploaded_file=request.files.get("expert_file"),
+        cached_file_name=expert_cached_file,
+    )
     if not expert_text and expert_cached_file:
         try:
             cached_path = WORKSPACE / expert_cached_file
@@ -3211,9 +3220,24 @@ def _execute_knowledge_revision():
                 expert_text = extract_text_from_path(str(cached_path))
         except Exception:
             pass
-    if not expert_text:
-        return jsonify({"status": "error", "error": "请输入专家修订意见"})
+    if not expert_text and uploaded_material_text:
+        expert_text = uploaded_material_text
 
+    # ── 无意见直通：不调用 LLM，直接透传 Step2 萃取稿 ──
+    style = _normalize_revision_style(style)
+    style_rule = REVISION_STYLE_RULES[style]
+    if _should_pass_through_preextract(expert_text, uploaded_material_text):
+        source_file_path, _ = _resolve_step2_excel_path(pipeline_id)
+        if not source_file_path:
+            return jsonify({"status": "error", "error": "未找到知识萃取文件，请先完成知识萃取（Step2）"})
+        payload = _align_no_opinion_success_payload(
+            pipeline_id, source_file_path, expert_text or "", style, style_rule
+        )
+        payload["skill_name"] = info.get("name", skill_id)
+        payload["skill_id"] = skill_id
+        return jsonify(payload)
+
+    # ── 有实质意见：调用 LLM 生成修订稿 ──
     result = _run_knowledge_revision(pipeline_id, expert_text, style, model_name)
     if result.get("status") == "ok":
         result["skill_name"] = info.get("name", skill_id)

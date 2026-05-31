@@ -43,7 +43,8 @@ def normalize_llm_url(url: str, api_type: str = API_TYPE_OPENAI) -> str:
         return url
     if url.endswith("/v1"):
         return url + "/chat/completions"
-    return url
+    # Bare hostname or custom base path → append standard OpenAI-compatible suffix
+    return url + "/v1/chat/completions"
 
 
 def extract_assistant_content(result: Any) -> str:
