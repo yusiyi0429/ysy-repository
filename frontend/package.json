@@ -1,0 +1,10 @@
+{
+  "name": "tacit-knowledge-frontend",
+  "version": "1.0.0",
+  "private": true,
+  "description": "隐性知识流水线前端（Luckysheet 离线 vendor）",
+  "scripts": {
+    "vendor": "node ../scripts/copy-frontend-vendor.js",
+    "prevendor": "npm install luckysheet@2.1.13 jquery@3.6.4 --no-save"
+  }
+}

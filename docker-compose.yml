@@ -1,0 +1,27 @@
+# 内网部署：先 docker load -i tacit-knowledge-externalization-*.tar
+# 将 image 改为 manifest 中的 compose_image_line（含版本 tag）
+# name：目录为中文时 Compose 无法自动推导项目名，会报 project name must not be empty
+name: tacit-knowledge
+
+services:
+  tacit-knowledge-externalization:
+    image: tacit-knowledge-externalization:2.0.0-arm64
+    container_name: tacit-knowledge-externalization
+    platform: linux/arm64
+    ports:
+      - "5000:5000"
+    volumes:
+      - ./workspace:/app/workspace
+      - ./logs:/app/logs
+      - ./config/llm-config.yaml:/app/config/llm-config.yaml:ro
+    environment:
+      - PYTHONUNBUFFERED=1
+      - TZ=Asia/Shanghai
+      - WORKSPACE_DIR=/app/workspace
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:5000/api/health', timeout=3)"]
+      interval: 30s
+      timeout: 5s
+      start_period: 15s
+      retries: 3

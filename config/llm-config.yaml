@@ -1,0 +1,45 @@
+# LLM Model Configuration
+# Preset models are loaded first; runtime edits are stored in workspace preset_overrides.json.
+# api_type: openai (default) | ccb_ainlplm (建行内部 ainlplm 网关)
+# 密钥请写入 llm-config.local.yaml（见 llm-config.local.yaml.example），勿提交真实密钥。
+
+presets:
+  - name: CCB-ainlplm-示例
+    api_type: ccb_ainlplm
+    url: http://YOUR_AINLPLM_HOST:8021/ai-service/ainlplm/chat
+    model: F-G-9B-V20241220-0000-00
+    api_key: "YOUR_ACCESS_KEY_ID"
+    tx_code: A4011LM01
+    sec_node_no: "400136"
+    timeout: 120
+    description: "建行内部 ainlplm 网关（按 Access_Key_Id/Tx-Code/Sec-Node-No 调用）"
+
+  - name: DeepSeek-V4-Flash
+    api_type: openai
+    url: http://YOUR_LLM_HOST:9005/v1/chat/completions
+    model: DeepSeek-V4-Flash-w8a8-mtp
+    api_key: "YOUR_API_KEY"
+    max_tokens: 4096
+    temperature: 0.7
+    description: "DeepSeek V4 Flash - 快速推理，适合大批量文本处理"
+
+  - name: Minimax-M2.7
+    api_type: openai
+    url: http://YOUR_LLM_HOST:9006/v1/chat/completions
+    model: Minimax_M2.7
+    api_key: "YOUR_API_KEY"
+    max_tokens: 4096
+    temperature: 0.7
+    description: "Minimax M2.7 - 长文本能力强，适合文档分析"
+
+  - name: Qwen3.5-35B
+    api_type: openai
+    url: http://YOUR_LLM_HOST:9001/v1/chat/completions
+    model: Qwen3.5-35B-A3B
+    api_key: "YOUR_API_KEY"
+    max_tokens: 4096
+    temperature: 0.7
+    description: "Qwen 3.5 35B - 均衡能力，适合对话与生成"
+
+# Custom models added at runtime are stored in the workspace.
+custom: []

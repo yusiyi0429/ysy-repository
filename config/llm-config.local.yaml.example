@@ -1,0 +1,15 @@
+# 本地模型密钥覆盖（复制为 llm-config.local.yaml，勿提交仓库）
+# 按 preset 名称覆盖 api_key / url 等字段
+
+presets:
+  CCB-ainlplm-示例:
+    api_key: "YOUR_ACCESS_KEY_ID"
+
+  DeepSeek-V4-Flash:
+    api_key: "YOUR_API_KEY"
+
+  Minimax-M2.7:
+    api_key: "YOUR_API_KEY"
+
+  Qwen3.5-35B:
+    api_key: "YOUR_API_KEY"

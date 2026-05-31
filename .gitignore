@@ -1,0 +1,42 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.tox/
+
+# Environment
+.env
+.env.local
+config/llm-config.local.yaml
+debug-*.log
+
+# IDE / Editor
+.vscode/
+.idea/
+*.iml
+*.swp
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Project temp
+*.tar.gz
+*.tar
+*.log
+*.err
+*.pid
+build_*.log
+
+# Runtime directories
+logs/
+workspace/
+
+# Frontend build deps（vendor/ 需提交或镜像内生成）
+frontend/node_modules/
+__pycache__/

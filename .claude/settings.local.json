@@ -1,0 +1,22 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(ls -lt --time=modify backend/scripts/*.py)",
+      "Bash(ls -lt --time=modify scripts/*)",
+      "Bash(python -c \"import py_compile; py_compile.compile\\('backend/app_server.py', doraise=True\\)\")",
+      "Bash(python -c 'import py_compile; py_compile.compile\\('\\\\''__TRACKED_VAR__'\\\\'', doraise=True\\)')",
+      "Bash(python -c \"from backend.app_server import app; print\\('=== Import OK, app routes:', len\\(app.url_map._rules\\), '==='\\)\")",
+      "Bash(python -c \"import app_server; print\\('=== Import OK, routes:', len\\(app_server.app.url_map._rules\\), '==='\\)\")",
+      "Bash(timeout 5 python app_server.py --host 127.0.0.1 --port 5000)",
+      "Bash(python app_server.py --host 127.0.0.1 --port 5001)",
+      "Bash(curl -s http://127.0.0.1:5001/api/health)",
+      "Bash(python -m json.tool)",
+      "Bash(curl -s http://127.0.0.1:5001/api/pipelines)",
+      "Bash(curl -s http://127.0.0.1:5001/api/llm/models)",
+      "Bash(curl -s http://127.0.0.1:5001/api/step1/schema)",
+      "Bash(kill %1)",
+      "Bash(python -c ' *)",
+      "Bash(git config *)"
+    ]
+  }
+}

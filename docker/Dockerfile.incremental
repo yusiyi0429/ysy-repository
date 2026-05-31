@@ -1,0 +1,7 @@
+# 基于本机已有 arm64 镜像快速重打（避免 apt/pip 重装）
+ARG BASE_IMAGE=tacit-knowledge-externalization:arm64-v2026.05.25-1803
+FROM ${BASE_IMAGE}
+
+COPY backend/ ./backend/
+COPY frontend/ ./frontend/
+COPY config/ ./config/

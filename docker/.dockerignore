@@ -1,0 +1,25 @@
+.git
+.gitignore
+**/__pycache__
+**/*.py[cod]
+**/.pytest_cache
+**/.mypy_cache
+**/.ruff_cache
+**/.venv
+.env
+.env.*
+.vscode
+.idea
+*.log
+*.err
+*.pid
+build_*.log
+logs/
+workspace/
+frontend/node_modules/
+*.tar
+*.tar.gz
+*.zip
+backend/scripts/
+# 保留 vendor 与构建脚本
+!frontend/vendor/

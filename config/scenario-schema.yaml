@@ -1,0 +1,85 @@
+# 场景配置 YAML Schema
+# Step1 默认按本文件生成 Excel 骨架；上传 .xlsx 可覆盖列结构
+
+scenario_name: default-knowledge-extraction
+display_name: 通用知识萃取结构
+domain: 通用
+version: "v1.0"
+
+scenario:
+  business_boundary: ""
+  target_users: []
+  decision_types: []
+
+categories:
+  - 判断规则
+  - 操作流程
+  - 反模式
+
+# 知识列（锚定四列「场景/场景说明/子场景/子场景说明」由系统固定，不在此列出）
+fields:
+  - name: 环节
+    type: 文本
+    required: false
+    fill_rule: 业务流程环节或步骤名称
+    example: 客户准入
+  - name: 访谈方向
+    type: 文本
+    required: false
+    fill_rule: 专家访谈聚焦点
+    example: 风险识别口径
+  - name: 具体方法
+    type: 长文本
+    required: true
+    fill_rule: 可执行的方法、规则或操作要点
+    example: 需同时核验征信与流水
+  - name: 知识类型
+    type: 枚举
+    required: false
+    fill_rule: 与 categories 对齐
+    example: 判断规则
+    enum_values:
+      - 判断规则
+      - 操作流程
+      - 反模式
+  - name: 知识引用
+    type: 文本
+    required: false
+    fill_rule: 制度/手册出处
+    example: 《信贷管理办法》第3章
+  - name: 适用条件
+    type: 长文本
+    required: false
+    fill_rule: 何时适用本条知识
+    example: 新客户首次授信
+  - name: 判断逻辑
+    type: 长文本
+    required: false
+    fill_rule: 判断链路与分支
+    example: 评级A且现金流稳定则通过
+  - name: 反模式/踩坑提示
+    type: 长文本
+    required: false
+    fill_rule: 常见错误与禁忌
+    example: 仅看抵押物不看现金流
+
+interview:
+  methods:
+    - 案例反推法
+    - 对比追问法
+    - 极限假设法
+  min_sessions: 3
+  session_duration_minutes: 60
+  required_experts: 2
+
+quality:
+  min_knowledge_items: 800
+  min_confidence_level: 中
+  source_annotation_rate: 0.95
+  anti_pattern_ratio: 0.10
+  skill_score_threshold: 75
+
+compilation:
+  output_format: SKILL.md
+  include_anti_patterns_section: true
+  include_usage_examples: true

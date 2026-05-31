@@ -1,0 +1,593 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>隐性知识显性化 · 四步法萃取流水线</title>
+<link rel="preconnect" href="https://fonts.googleapis.cn">
+<link rel="preconnect" href="https://fonts.gstatic.cn" crossorigin>
+<link href="https://fonts.googleapis.cn/css2?family=Noto+Sans+SC:wght@300;400;500;700&family=Roboto+Mono:wght@400;500&display=swap" rel="stylesheet">
+<!-- Luckysheet 离线资源 -->
+<link rel="stylesheet" href="vendor/luckysheet/plugins/css/pluginsCss.css">
+<link rel="stylesheet" href="vendor/luckysheet/plugins/plugins.css">
+<link rel="stylesheet" href="vendor/luckysheet/css/luckysheet.css">
+<link rel="stylesheet" href="vendor/luckysheet/assets/iconfont/iconfont.css">
+<link rel="stylesheet" href="css/style.css?v=20260529free">
+</head>
+<body>
+
+<div class="app">
+  <!-- Top Navigation -->
+  <nav class="app-nav">
+    <div class="nav-brand" id="nav-brand">隐性知识显性化 · 四步法</div>
+    <div class="nav-steps" id="nav-steps">
+      <button class="nav-back-btn" onclick="goBackToOverview()" title="返回总览">
+        <span class="back-arrow">‹</span> 返回
+      </button>
+      <div class="step-track">
+        <button class="step-btn" data-step="1"><span class="btn-num">01</span>场景锚定</button>
+        <span class="step-connector"></span>
+        <button class="step-btn" data-step="2"><span class="btn-num">02</span>知识萃取</button>
+        <span class="step-connector"></span>
+        <button class="step-btn" data-step="3"><span class="btn-num">03</span>知识对齐</button>
+        <span class="step-connector"></span>
+        <button class="step-btn" data-step="4"><span class="btn-num">04</span>智能转化</button>
+      </div>
+      <span class="nav-action-divider"></span>
+      <button class="nav-action-btn" id="save-pipeline-btn" onclick="saveCurrentPipeline()" title="保存当前流水线">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+        保存
+      </button>
+      <button class="nav-action-btn nav-action-btn-danger" id="clear-pipeline-btn" onclick="clearCurrentPipeline()" title="清空当前流水线">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+        清空
+      </button>
+    </div>
+    <div class="nav-actions">
+      <button class="nav-config-btn" id="skill-nav-btn" onclick="openSkillPanel()" title="Skill配置">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+        Skill配置
+      </button>
+      <button class="nav-config-btn" id="model-nav-btn" onclick="openModelPanel()" title="模型配置">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+        模型配置
+      </button>
+      <div class="nav-status" id="server-status">
+        <span class="status-dot"></span>检测中...
+      </div>
+    </div>
+  </nav>
+
+  <!-- Skill Config Panel (Slide-in) -->
+  <div class="skill-panel" id="skill-panel">
+    <div class="skill-panel-header">
+      <h3>Skill 配置</h3>
+      <button class="skill-panel-close" onclick="closeSkillPanel()">&times;</button>
+    </div>
+    <div class="skill-panel-body" id="skill-panel-body">
+      <!-- rendered by JS -->
+    </div>
+  </div>
+
+  <!-- Model Config Panel (Slide-in) -->
+  <div class="model-panel" id="model-panel">
+    <div class="model-panel-header">
+      <h3>LLM 模型配置</h3>
+      <button class="model-panel-close" onclick="closeModelPanel()">&times;</button>
+    </div>
+    <div class="model-panel-body">
+      <div class="model-section">
+        <div class="model-section-header">
+          <span>已配置模型</span>
+          <button class="action-btn small" onclick="showAddModelForm()">+ 添加模型</button>
+        </div>
+        <div id="model-list"></div>
+      </div>
+
+      <!-- Add Model Form (hidden by default) -->
+      <div class="model-add-form hidden" id="add-model-form">
+        <div class="model-section-header"><span id="model-form-title">添加自定义模型</span></div>
+        <div class="form-row">
+          <div class="form-group half">
+            <label>模型名称</label>
+            <input type="text" id="new-model-name" placeholder="如: GPT-4o">
+          </div>
+          <div class="form-group half">
+            <label>接口类型</label>
+            <select id="new-model-api-type" onchange="toggleCcbModelFields()">
+              <option value="openai">OpenAI 兼容</option>
+              <option value="ccb_ainlplm">建行 ainlplm</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group half">
+            <label>模型标识 (model)</label>
+            <input type="text" id="new-model-model" placeholder="如: gpt-4o 或 F-G-98-...">
+          </div>
+          <div class="form-group half">
+            <label>API 地址</label>
+            <input type="text" id="new-model-url" placeholder="OpenAI: .../v1/chat/completions 或建行: .../ainlplm/chat">
+          </div>
+        </div>
+        <div class="form-group">
+          <label>API Key / Access_Key_Id</label>
+          <input type="text" id="new-model-apikey" placeholder="输入 API Key 或 Access_Key_Id">
+        </div>
+        <div id="ccb-model-fields" class="hidden">
+          <div class="form-row">
+            <div class="form-group half">
+              <label>Tx-Code</label>
+              <input type="text" id="new-model-tx-code" placeholder="如: A4011LM01">
+            </div>
+            <div class="form-group half">
+              <label>Sec-Node-No</label>
+              <input type="text" id="new-model-sec-node" placeholder="如: 400136">
+            </div>
+          </div>
+        </div>
+        <div class="form-row" id="openai-model-tuning">
+          <div class="form-group half">
+            <label>Max Tokens</label>
+            <input type="number" id="new-model-maxtokens" value="4096">
+          </div>
+          <div class="form-group half">
+            <label>Temperature</label>
+            <input type="number" id="new-model-temp" value="0.7" step="0.1" min="0" max="2">
+          </div>
+        </div>
+        <div class="form-group">
+          <label>描述（可选）</label>
+          <input type="text" id="new-model-desc" placeholder="模型能力简述">
+        </div>
+        <div class="form-actions">
+          <button class="action-btn secondary small" onclick="hideAddModelForm()">取消</button>
+          <button class="action-btn small" id="model-form-save-btn" onclick="saveModel()">添加</button>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="model-overlay hidden" id="model-overlay" onclick="closeModelPanel();closeSkillPanel()"></div>
+
+  <!-- Content Area -->
+  <div class="app-content">
+
+    <!-- ========== Panel 0: Overview ========== -->
+    <div class="panel active" id="panel-0">
+      <!-- Pipeline list will be rendered here by JS -->
+      <div id="pipeline-list-container"></div>
+    </div>
+
+    <!-- ========== Panel 1: Step 01 场景锚定 ========== -->
+    <div class="panel" id="panel-1">
+
+      <div class="slide">
+        <div class="slide-topbar">
+          <div class="slide-num-box"><div class="step-label">STEP</div><div class="step-num">01</div></div>
+          <div class="slide-title-area">
+            <div class="slide-meta-en">Scenario Anchoring · 场景锚定</div>
+            <div class="slide-title">场景确认与骨架定制</div>
+          </div>
+        </div>
+        <div class="slide-subtitle-bar">
+          <span class="subtitle-tag">核心要点</span>
+          <div class="slide-subtitle">骨架错则全盘错——本步定义"这个领域的知识应该长什么样"</div>
+        </div>
+        <div class="three-col">
+          <div class="col col-left">
+            <div class="col-header"><div class="col-icon">I</div><div class="col-header-text"><div class="col-label-cn">输入</div><div class="col-label-en">Input</div></div></div>
+            <div class="col-content form-area">
+              <div class="form-group">
+                <label>场景名称</label>
+                <input type="text" id="s1-scenario-name" placeholder="如：信贷审批">
+              </div>
+              <div class="form-group">
+                <label>场景内容</label>
+                <textarea id="s1-scenario-content" rows="4" placeholder="描述该场景的核心业务流程、关键判断点和知识特征"></textarea>
+              </div>
+              <div class="form-group">
+                <label>子场景</label>
+                <div id="s1-sub-scenarios"></div>
+                <button class="s1-add-sub-btn" onclick="step1AddSubScenario()">+ 添加子场景</button>
+              </div>
+            </div>
+          </div>
+          <div class="col col-center">
+            <div class="col-header"><div class="col-icon">M</div><div class="col-header-text"><div class="col-label-cn">操作</div><div class="col-label-en">Action</div></div></div>
+            <div class="col-content action-area">
+              <div class="form-group">
+                <label>知识列（可自定义）</label>
+                <div id="s1-knowledge-columns" class="s1-knowledge-columns"></div>
+                <div class="s1-k-col-actions">
+                  <button type="button" class="s1-add-sub-btn" onclick="step1AddKnowledgeColumn()">+ 添加列</button>
+                  <button type="button" class="s1-k-col-reset" onclick="step1ResetKnowledgeColumns()">恢复默认列</button>
+                </div>
+                <div class="file-hint">锚定四列（场景/场景说明/子场景/子场景说明）固定，此处仅配置知识列</div>
+              </div>
+              <div class="form-group">
+                <label>骨架输出方式</label>
+                <select id="s1-output-format">
+                  <option value="excel">系统生成 Excel</option>
+                  <option value="markdown">系统生成 Markdown</option>
+                </select>
+                <div class="file-hint">选择 Markdown 时，将自动补齐环节、判断逻辑、反模式等富语义列，便于 Step2 深度萃取</div>
+              </div>
+              <details class="s1-advanced-template">
+                <summary>高级：上传或选用部门 Excel 模板</summary>
+                <div class="form-group" style="margin-top:8px;">
+                  <label>上传 .xlsx 模板（优先级最高）</label>
+                  <div class="s2-file-upload-row">
+                    <label class="s2-file-btn" for="s1-template-file">选择文件</label>
+                    <span class="s2-file-name" id="s1-template-file-name">未选择</span>
+                    <input type="file" id="s1-template-file" accept=".xlsx,.xls" style="display:none">
+                  </div>
+                </div>
+                <div class="form-group">
+                  <label>或选用 samples 中的 Excel 模板</label>
+                  <select id="s1-legacy-template">
+                    <option value="">不使用（按上方自定义列生成）</option>
+                  </select>
+                </div>
+                <div class="file-hint">上传/选用 Excel 后，将按文件表头为准，自定义知识列仅作记录</div>
+              </details>
+              <button class="action-btn" id="s1-generate" onclick="step1Generate()">
+                <span class="action-icon">&#9654;</span> 生成场景骨架
+              </button>
+              <div class="action-note">自由定义知识列与输出格式；后续步骤仍使用配套 Excel 继续流水线</div>
+            </div>
+          </div>
+          <div class="col col-right">
+            <div class="col-header"><div class="col-icon">O</div><div class="col-header-text"><div class="col-label-cn">输出</div><div class="col-label-en">Output</div></div></div>
+            <div class="col-content output-area" id="s1-output">
+              <div class="output-placeholder">填写场景信息后点击"生成场景骨架"查看结果</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ========== Panel 2: Step 02 知识萃取 ========== -->
+    <div class="panel" id="panel-2">
+
+      <div class="slide">
+        <div class="slide-topbar">
+          <div class="slide-num-box"><div class="step-label">STEP</div><div class="step-num">02</div></div>
+          <div class="slide-title-area">
+            <div class="slide-meta-en">Knowledge Extraction · 知识萃取</div>
+            <div class="slide-title">多源知识萃取</div>
+          </div>
+        </div>
+        <div class="slide-subtitle-bar">
+          <span class="subtitle-tag">核心要点</span>
+          <div class="slide-subtitle">把已显性化的10%先固化下来——让专家面对的不是空白Excel，而是一份"待审稿"</div>
+        </div>
+        <div class="three-col">
+          <div class="col col-left">
+            <div class="col-header"><div class="col-icon">I</div><div class="col-header-text"><div class="col-label-cn">输入</div><div class="col-label-en">Input</div></div></div>
+            <div class="col-content form-area">
+              <!-- Step1 output reference -->
+              <div class="form-group">
+                <label>上一步输出件（场景锚定模板）</label>
+                <div id="s2-prev-output-area">
+                  <div class="s2-prev-empty">尚未检测到上一步输出，请先完成场景锚定</div>
+                </div>
+              </div>
+              <!-- Knowledge source upload -->
+              <div class="form-group">
+                <label>知识来源文件</label>
+                <input type="file" id="s2-source-file" accept=".txt,.md,.docx,.pdf">
+                <span id="s2-file-name" class="s2-file-name"></span>
+                <div class="file-hint">上传待萃取的制度文件、操作手册、案例库（TXT/MD/DOCX/PDF）</div>
+              </div>
+              <div class="form-group">
+                <label>或粘贴文档内容</label>
+                <textarea id="s2-doc-text" rows="4" placeholder="将制度文件/操作手册的文本粘贴至此..."></textarea>
+              </div>
+            </div>
+          </div>
+          <div class="col col-center">
+            <div class="col-header"><div class="col-icon">M</div><div class="col-header-text"><div class="col-label-cn">操作</div><div class="col-label-en">Action</div></div></div>
+            <div class="col-content action-area">
+              <div class="form-group" style="margin-bottom:12px">
+                <label>萃取风格</label>
+                <select id="s2-extract-style">
+                  <option value="标准萃取">标准萃取</option>
+                  <option value="深度萃取">深度萃取</option>
+                  <option value="精简萃取">精简萃取</option>
+                </select>
+                <div class="file-hint">标准: 8-22条平衡覆盖；深度: 12-40条并尽量补全字段；精简: 5-10条，仅保留高价值条目</div>
+              </div>
+              <div class="form-group" style="margin-bottom:12px">
+                <label>选择模型</label>
+                <select id="s2-model"></select>
+              </div>
+              <div class="form-group" style="margin-bottom:12px">
+                <label>引用 Skill</label>
+                <select id="s2-skill-select">
+                  <option value="">-- 选择 Skill --</option>
+                </select>
+              </div>
+              <button class="action-btn" id="s2-skill-extract" onclick="step2SkillExtract()">
+                <span class="action-icon">&#9654;</span> 执行
+              </button>
+              <div class="step-readiness info" id="s2-readiness">请补全 Skill、模型与文档输入后执行</div>
+              <div class="action-note">选择 Skill 后点击执行，自动从文档中提取结构化知识条目</div>
+            </div>
+          </div>
+          <div class="col col-right">
+            <div class="col-header"><div class="col-icon">O</div><div class="col-header-text"><div class="col-label-cn">输出</div><div class="col-label-en">Output</div></div></div>
+            <div class="col-content output-area" id="s2-output">
+              <div class="output-placeholder">上传知识来源文件并点击"引用 Skill 萃取"查看结果</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ========== Panel 3: Step 03 知识对齐 ========== -->
+    <div class="panel" id="panel-3">
+
+      <div class="slide">
+        <div class="slide-topbar">
+          <div class="slide-num-box"><div class="step-label">STEP</div><div class="step-num">03</div></div>
+          <div class="slide-title-area">
+            <div class="slide-meta-en">Knowledge Alignment · 知识对齐</div>
+            <div class="slide-title">交互式知识对齐</div>
+          </div>
+        </div>
+        <div class="slide-subtitle-bar">
+          <span class="subtitle-tag">核心要点</span>
+          <div class="slide-subtitle">AI 生成对齐建议 → 逐条审核采纳/驳回/编辑 → 一键生成可发布的对齐稿</div>
+        </div>
+
+        <!-- Phase 1: 输入区 -->
+        <div class="align-input-section" id="s3-input-section">
+          <div class="three-col">
+            <div class="col col-left">
+              <div class="col-header"><div class="col-icon">I</div><div class="col-header-text"><div class="col-label-cn">输入</div><div class="col-label-en">Input</div></div></div>
+              <div class="col-content form-area">
+                <div class="s2-prev-card" id="s3-prev-draft" style="display:none;">
+                  <div class="s2-prev-header">
+                    <span class="s2-prev-icon">📋</span>
+                    <span class="s2-prev-title">知识萃取稿</span>
+                    <span class="s2-prev-badge" id="s3-prev-badge">已关联</span>
+                  </div>
+                  <div class="s2-prev-info" id="s3-prev-info"></div>
+                  <div class="s2-prev-tags" id="s3-prev-tags"></div>
+                </div>
+                <div class="s2-prev-empty" id="s3-prev-empty">
+                  <div class="s2-prev-empty-icon">📋</div>
+                  <div>暂无 Step2 萃取稿输出</div>
+                  <div class="s2-prev-empty-hint">请先完成知识萃取节点</div>
+                </div>
+                <div class="form-group" style="margin-top:12px;">
+                  <label>对话记录（专家与模型）</label>
+                  <div id="s3-chat-history" class="align-chat-history">
+                    <div class="align-chat-empty">暂无对话。请先输入一条修订意见并发送。</div>
+                  </div>
+                </div>
+                <div class="form-group">
+                  <label>专家输入（本轮意见）</label>
+                  <textarea id="s3-expert-text" rows="5" placeholder="可填写具体修订意见；若无修改可留空或填写「暂无意见」，系统将自动确认当前萃取稿为对齐稿"></textarea>
+                </div>
+                <div class="form-group">
+                  <label>或上传专家纪要文件</label>
+                  <input type="file" id="s3-expert-file" accept=".txt,.md,.json">
+                  <span id="s3-file-name" class="s2-file-name"></span>
+                </div>
+              </div>
+            </div>
+            <div class="col col-center">
+              <div class="col-header"><div class="col-icon">M</div><div class="col-header-text"><div class="col-label-cn">配置</div><div class="col-label-en">Config</div></div></div>
+              <div class="col-content action-area">
+                <div class="form-group">
+                  <label>对齐风格</label>
+                  <select id="s3-revision-style">
+                    <option value="标准修订">标准修订</option>
+                    <option value="严格修订">严格修订</option>
+                    <option value="宽松修订">宽松修订</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label>选择模型</label>
+                  <select id="s3-model"></select>
+                </div>
+                <div class="form-group" style="margin-bottom:12px">
+                  <label>引用 Skill</label>
+                  <select id="s3-skill-select">
+                    <option value="">-- 选择 Skill --</option>
+                  </select>
+                </div>
+                <button class="action-btn" id="s3-revise-btn" onclick="step3GeneratePreview()">
+                  <span class="action-icon">&#9881;</span> 发送并智能修订
+                </button>
+                <div class="step-readiness info" id="s3-align-hint">若无意见可直接点击按钮，系统将按预萃稿直通生成对齐稿</div>
+                <div class="action-note">专家可多轮输入修订意见，模型会结合历史对话持续更新对齐建议。</div>
+              </div>
+            </div>
+            <div class="col col-right">
+              <div class="col-header"><div class="col-icon">O</div><div class="col-header-text"><div class="col-label-cn">状态</div><div class="col-label-en">Status</div></div></div>
+              <div class="col-content output-area" id="s3-output">
+                <div class="output-placeholder">输入专家意见后点击「生成对齐建议」</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Phase 2: 交互式审核区 -->
+        <div class="align-review-section" id="s3-review-section" style="display:none;">
+          <!-- 工具栏 -->
+          <div class="align-toolbar">
+            <div class="align-toolbar-left">
+              <span class="align-toolbar-title" id="s3-review-title">对齐建议审核</span>
+              <span class="align-toolbar-count" id="s3-review-count"></span>
+            </div>
+            <div class="align-toolbar-center">
+              <div class="align-filter-group">
+                <button class="align-filter-btn active" data-filter="all" onclick="alignFilterNotes('all')">全部</button>
+                <button class="align-filter-btn" data-filter="modify" onclick="alignFilterNotes('modify')">修改</button>
+                <button class="align-filter-btn" data-filter="add" onclick="alignFilterNotes('add')">新增</button>
+                <button class="align-filter-btn" data-filter="delete" onclick="alignFilterNotes('delete')">删除</button>
+                <button class="align-filter-btn" data-filter="supplement" onclick="alignFilterNotes('supplement')">补充</button>
+              </div>
+            </div>
+            <div class="align-toolbar-right">
+              <button class="align-batch-btn align-batch-accept" onclick="alignBatchAcceptAll()">全部采纳</button>
+              <button class="align-batch-btn align-batch-reject" onclick="alignBatchRejectAll()">全部驳回</button>
+              <button class="align-batch-btn" onclick="step3BackToInput()">返回修改</button>
+            </div>
+          </div>
+
+          <!-- 建议列表 -->
+          <div class="align-notes-list" id="s3-notes-list"></div>
+
+          <!-- 底部操作条 -->
+          <div class="align-bottom-bar">
+            <div class="align-bottom-stats">
+              <span class="align-stat-item align-stat-accepted"><span class="align-stat-dot dot-accepted"></span>已采纳 <strong id="s3-accepted-count">0</strong></span>
+              <span class="align-stat-item align-stat-rejected"><span class="align-stat-dot dot-rejected"></span>已驳回 <strong id="s3-rejected-count">0</strong></span>
+              <span class="align-stat-item align-stat-pending"><span class="align-stat-dot dot-pending"></span>待审 <strong id="s3-pending-count">0</strong></span>
+              <span class="align-stat-item align-stat-edited"><span class="align-stat-dot dot-edited"></span>已编辑 <strong id="s3-edited-count">0</strong></span>
+            </div>
+            <div class="align-bottom-actions">
+              <button class="action-btn edit-btn" onclick="editStep3Revision()">
+                <span class="action-icon">&#9998;</span> 在线编辑底稿
+              </button>
+              <button class="action-btn" id="s3-apply-btn" onclick="step3ApplyNotes()">
+                <span class="action-icon">&#10003;</span> 确认并生成对齐稿
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Phase 3: 结果区 -->
+        <div class="align-result-section" id="s3-result-section" style="display:none;">
+          <div class="align-result-card" id="s3-result-card"></div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- ========== Panel 4: Step 04 智能转化 ========== -->
+    <div class="panel" id="panel-4">
+
+      <div class="slide">
+        <div class="slide-topbar">
+          <div class="slide-num-box"><div class="step-label">STEP</div><div class="step-num">04</div></div>
+          <div class="slide-title-area">
+            <div class="slide-meta-en">Knowledge Delivery · 智能转化</div>
+            <div class="slide-title">三类交付物生成</div>
+          </div>
+        </div>
+        <div class="slide-subtitle-bar">
+          <span class="subtitle-tag">核心要点</span>
+          <div class="slide-subtitle">一次生成思维链、QA 对、OpenClaw 兼容 Skill，覆盖推理、问答与 Agent 技能三类消费场景</div>
+        </div>
+        <div class="three-col">
+          <!-- 输入 -->
+          <div class="col col-left">
+            <div class="col-header"><div class="col-icon">I</div><div class="col-header-text"><div class="col-label-cn">输入</div><div class="col-label-en">Input</div></div></div>
+            <div class="col-content form-area">
+              <div class="s2-section">
+                <div class="s2-label">知识对齐稿</div>
+                <div id="s5-prev-draft" class="s2-prev-box" style="display:none">
+                  <div class="s2-prev-info">
+                    <div class="s2-prev-name" id="s5-prev-name">-</div>
+                    <div class="s2-prev-meta" id="s5-prev-meta">-</div>
+                  </div>
+                  <div class="s2-prev-tags" id="s5-prev-tags"></div>
+                </div>
+                <div id="s5-prev-empty" class="s2-prev-empty">暂无知识对齐稿，请先完成知识对齐节点</div>
+              </div>
+            </div>
+          </div>
+          <!-- 操作 -->
+          <div class="col col-center">
+            <div class="col-header"><div class="col-icon">M</div><div class="col-header-text"><div class="col-label-cn">操作</div><div class="col-label-en">Action</div></div></div>
+            <div class="col-content action-area">
+              <div class="form-group" style="margin-bottom:12px">
+                <label>选择模型</label>
+                <select id="s5-model"></select>
+              </div>
+              <div class="form-group" style="margin-bottom:12px">
+                <label>交付物类型（默认全选）</label>
+                <div class="s5-format-options" id="s5-format-options">
+                  <label class="s5-format-chip"><input type="checkbox" id="s5-fmt-cot" checked> 思维链</label>
+                  <label class="s5-format-chip"><input type="checkbox" id="s5-fmt-qa" checked> QA 对</label>
+                  <label class="s5-format-chip"><input type="checkbox" id="s5-fmt-skill" checked> Skill（OpenClaw）</label>
+                </div>
+              </div>
+              <button class="action-btn" onclick="step5Compile()">
+                <span class="action-icon">&#9654;</span> 生成交付物
+              </button>
+              <div class="action-note">基于知识对齐稿确定性转换；Skill 含 openclaw.skill.json 清单，可直接接入 OpenClaw</div>
+            </div>
+          </div>
+          <!-- 输出 -->
+          <div class="col col-right">
+            <div class="col-header"><div class="col-icon">O</div><div class="col-header-text"><div class="col-label-cn">输出</div><div class="col-label-en">Output</div></div></div>
+            <div class="col-content output-area" id="s5-output">
+              <div class="output-placeholder">完成知识对齐后，点击「生成交付物」获取思维链 / QA 对 / Skill</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- Excel Online Editor Modal -->
+<div class="excel-editor-overlay" id="excel-editor-modal">
+  <div class="excel-editor-dialog">
+    <div class="excel-editor-header">
+      <div class="excel-editor-title">
+        <span class="excel-editor-icon">&#9998;</span>
+        <span id="excel-editor-step-label">在线编辑</span>
+      </div>
+      <div class="excel-editor-actions">
+        <button class="excel-btn excel-btn-save" id="excel-editor-save-btn" onclick="saveExcelEditor()">保存</button>
+        <button class="excel-btn excel-btn-close" onclick="closeExcelEditor()">关闭</button>
+      </div>
+    </div>
+    <div class="excel-editor-body" id="excel-editor-content">
+      <div class="excel-editor-placeholder">请上传 Excel 文件后点击"在线编辑"按钮</div>
+    </div>
+  </div>
+</div>
+
+<!-- Markdown Editor Modal for SKILL.md -->
+<div class="md-editor-overlay" id="markdown-editor-modal">
+  <div class="md-editor-dialog">
+    <div class="md-editor-header">
+      <div class="md-editor-title">
+        <span class="md-editor-icon">&#128196;</span>
+        <span id="markdown-editor-title">SKILL.md 预览编辑</span>
+      </div>
+      <div class="md-editor-actions">
+        <button class="md-btn md-btn-save" id="md-editor-save-btn" onclick="saveMarkdownContent()">&#128190; 保存</button>
+        <button class="md-btn md-btn-download" id="md-editor-download-btn" onclick="downloadMarkdownContent()">&#11015; 下载</button>
+        <button class="md-btn md-btn-copy" onclick="copyMarkdownContent()">&#128203; 复制</button>
+        <button class="md-btn md-btn-close" onclick="closeMarkdownEditor()">&times; 关闭</button>
+      </div>
+    </div>
+    <div class="md-editor-body">
+      <div class="md-editor-pane">
+        <div class="md-pane-header">&#9998; 编辑区</div>
+        <textarea class="md-editor-textarea" id="markdown-editor-content" oninput="onMarkdownEditorInput()" placeholder="SKILL.md 内容..."></textarea>
+      </div>
+      <div class="md-editor-pane">
+        <div class="md-pane-header">&#128065; 预览区</div>
+        <div class="md-preview" id="markdown-preview"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="vendor/jquery/jquery.min.js"></script>
+<script src="vendor/luckysheet/plugins/js/plugin.js"></script>
+<script src="vendor/luckysheet/luckysheet.umd.js"></script>
+<script src="js/excel-luckysheet.js?v=20260528f"></script>
+<script src="js/app.js?v=20260529uxboost"></script>
+</body>
+</html>
