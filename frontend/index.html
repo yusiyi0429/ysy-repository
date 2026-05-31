@@ -372,8 +372,20 @@ fetch('/api/version').then(function(r){return r.json()}).then(function(v){
               <!-- 模式发现多文件上传（仅模式发现时显示） -->
               <div class="form-group s2-conditional hidden" id="s2-group-pattern-files" style="margin-bottom:12px">
                 <label>案例文件（可多选，至少2个）</label>
-                <input type="file" id="s2-pattern-files" accept=".txt,.md" multiple>
-                <div class="file-hint">选择至少2个案例复盘文件进行交叉分析。支持 TXT/MD 格式</div>
+                <div class="s2-pattern-dropzone" id="s2-pattern-dropzone">
+                  <div class="s2-pattern-dropzone-icon">📂</div>
+                  <div class="s2-pattern-dropzone-text">点击选择文件，或拖拽案例文件到此处</div>
+                  <div class="s2-pattern-dropzone-hint">支持 Ctrl+点击 多选，或按住 Shift 连选</div>
+                  <input type="file" id="s2-pattern-files" accept=".txt,.md" multiple>
+                </div>
+                <div class="s2-pattern-filelist hidden" id="s2-pattern-filelist">
+                  <div class="s2-pattern-filelist-header">
+                    <span class="s2-pattern-filelist-count" id="s2-pattern-filecount">0 个文件</span>
+                    <button type="button" class="s2-pattern-filelist-clear" onclick="clearPatternFiles()">清空</button>
+                  </div>
+                  <div class="s2-pattern-filelist-items" id="s2-pattern-fileitems"></div>
+                  <div class="s2-pattern-filelist-status" id="s2-pattern-filestatus"></div>
+                </div>
               </div>
               <div class="form-group s2-conditional hidden" id="s2-group-pattern-text" style="margin-bottom:12px">
                 <label>或粘贴多个案例文本</label>
@@ -430,7 +442,7 @@ fetch('/api/version').then(function(r){return r.json()}).then(function(v){
 
         <!-- Phase 1: 输入区 -->
         <div class="align-input-section" id="s3-input-section">
-          <div class="three-col">
+          <div class="three-col-wide">
             <div class="col col-left">
               <div class="col-header"><div class="col-icon">I</div><div class="col-header-text"><div class="col-label-cn">输入</div><div class="col-label-en">Input</div></div></div>
               <div class="col-content form-area">

@@ -447,9 +447,18 @@ a { color: var(--red); text-decoration: none; }
 }
 .slide-subtitle { font-size: 13px; color: var(--text-secondary); }
 
-/* ===== Three Column Layout ===== */
-.three-col { display: grid; grid-template-columns: 1fr 1fr 1fr; min-height: 420px; }
-.col { padding: 20px; border-right: 1px solid var(--border); display: flex; flex-direction: column; }
+/* 三列布局：Step 1/2/4 与 Step 3 统一，全部三列可见、可拖动调节 */
+.three-col, .three-col-wide {
+  display: flex; align-items: stretch;
+}
+.col {
+  padding: 20px; border-right: 1px solid var(--border);
+  display: flex; flex-direction: column; min-height: 320px;
+  min-width: 160px;
+}
+.col:first-child { flex: 1; }
+/* 非首列默认宽度 */
+.col:not(:first-child) { flex: 0 0 auto; width: 280px; }
 .col:last-child { border-right: none; }
 .col-header { display: flex; align-items: center; gap: 10px; margin-bottom: 16px; padding-bottom: 12px; border-bottom: 2px solid var(--border); }
 .col-icon {
@@ -463,6 +472,24 @@ a { color: var(--red); text-decoration: none; }
 .col-label-cn { font-size: 14px; font-weight: 700; color: var(--text); }
 .col-label-en { font-size: 10px; color: var(--text-muted); letter-spacing: 0.5px; }
 .col-content { flex: 1; overflow-y: auto; }
+
+/* 列宽拖动分隔条 */
+.col-gutter {
+  width: 6px; cursor: col-resize; background: transparent;
+  transition: background 0.15s; position: relative; flex-shrink: 0;
+  z-index: 10; margin: 0 -3px;
+}
+.col-gutter:hover,
+.col-gutter.dragging { background: var(--red); border-radius: 3px; }
+.col-gutter::after {
+  content: ''; position: absolute; top: 50%; left: 50%;
+  transform: translate(-50%, -50%);
+  width: 2px; height: 24px; border-radius: 1px;
+  background: var(--border);
+  transition: background 0.15s;
+}
+.col-gutter:hover::after,
+.col-gutter.dragging::after { background: #fff; }
 
 /* ===== Forms ===== */
 .form-group { margin-bottom: 16px; }
@@ -581,9 +608,10 @@ a { color: var(--red); text-decoration: none; }
 
 /* ===== Responsive ===== */
 @media (max-width: 1024px) {
-  .three-col { grid-template-columns: 1fr; }
-  .col { border-right: none; border-bottom: 1px solid var(--border); }
+  .three-col, .three-col-wide { flex-direction: column; }
+  .col { border-right: none; border-bottom: 1px solid var(--border); width: 100% !important; flex: none !important; }
   .col:last-child { border-bottom: none; }
+  .col-gutter { display: none; }
 }
 @media (max-width: 768px) {
   .app-nav { flex-wrap: wrap; height: auto; padding: 12px; gap: 8px; }
@@ -1967,6 +1995,42 @@ a { color: var(--red); text-decoration: none; }
 }
 .s2-info-card-icon { font-size: 20px; flex-shrink: 0; }
 .s2-info-card-text { font-size: 12px; color: var(--text-secondary); line-height: 1.6; }
+
+/* ===== 模式发现文件上传区 ===== */
+.s2-pattern-dropzone {
+  position: relative; padding: 24px 16px; border: 2px dashed var(--border);
+  border-radius: var(--radius); text-align: center; cursor: pointer;
+  transition: border-color 0.2s, background 0.2s; background: #fafbfc;
+}
+.s2-pattern-dropzone:hover { border-color: var(--red); background: #fef5f5; }
+.s2-pattern-dropzone input[type="file"] {
+  position: absolute; inset: 0; opacity: 0; cursor: pointer;
+}
+.s2-pattern-dropzone-icon { font-size: 28px; margin-bottom: 4px; }
+.s2-pattern-dropzone-text { font-size: 13px; color: var(--text-secondary); }
+.s2-pattern-dropzone-hint { font-size: 11px; color: var(--text-muted); margin-top: 4px; }
+.s2-pattern-filelist { margin-top: 8px; }
+.s2-pattern-filelist-header {
+  display: flex; justify-content: space-between; align-items: center;
+  margin-bottom: 6px;
+}
+.s2-pattern-filelist-count { font-size: 12px; font-weight: 600; color: var(--text); }
+.s2-pattern-filelist-clear {
+  font-size: 11px; color: var(--text-muted); background: none; border: none;
+  cursor: pointer; text-decoration: underline;
+}
+.s2-pattern-filelist-items { display: flex; flex-direction: column; gap: 2px; max-height: 160px; overflow-y: auto; }
+.s2-pattern-fileitem {
+  display: flex; align-items: center; gap: 6px; padding: 4px 8px;
+  background: #f0f9ff; border-radius: 3px; font-size: 12px; color: var(--text);
+}
+.s2-pattern-fileitem-icon { font-size: 14px; flex-shrink: 0; }
+.s2-pattern-fileitem-name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.s2-pattern-fileitem-size { font-size: 10px; color: var(--text-muted); flex-shrink: 0; }
+.s2-pattern-filelist-status { margin-top: 6px; font-size: 11px; font-weight: 600; }
+.s2-pattern-filelist-status.ok { color: var(--green); }
+.s2-pattern-filelist-status.warn { color: var(--warning); }
+.s2-pattern-filelist-status.error { color: var(--error); }
 
 /* ===== 修订上下文侧栏 ===== */
 .revision-context {

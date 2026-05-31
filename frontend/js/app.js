@@ -64,6 +64,40 @@ function selectStep2Skill(skillId) {
   updateStep2Readiness();
 }
 
+/* ===== 模式发现：文件列表展示 ===== */
+function refreshPatternFileList() {
+  var input = document.getElementById('s2-pattern-files');
+  var list = document.getElementById('s2-pattern-filelist');
+  var items = document.getElementById('s2-pattern-fileitems');
+  var count = document.getElementById('s2-pattern-filecount');
+  var status = document.getElementById('s2-pattern-filestatus');
+  if (!input || !list || !items) return;
+
+  var files = input.files || [];
+  if (files.length === 0) { list.classList.add('hidden'); return; }
+  list.classList.remove('hidden');
+
+  count.textContent = files.length + ' 个文件';
+  var html = '';
+  for (var i = 0; i < files.length; i++) {
+    var size = files[i].size > 1024 ? (files[i].size / 1024).toFixed(1) + ' KB' : files[i].size + ' B';
+    html += '<div class="s2-pattern-fileitem"><span class="s2-pattern-fileitem-icon">📄</span><span class="s2-pattern-fileitem-name">' + escapeHtml(files[i].name) + '</span><span class="s2-pattern-fileitem-size">' + size + '</span></div>';
+  }
+  items.innerHTML = html;
+
+  if (status) {
+    if (files.length >= 2) { status.className = 's2-pattern-filelist-status ok'; status.textContent = '✅ 已满足最低要求（≥2个案例）'; }
+    else { status.className = 's2-pattern-filelist-status warn'; status.textContent = '⚠️ 至少需要 2 个案例文件，请继续添加'; }
+  }
+  updateStep2Readiness();
+}
+
+function clearPatternFiles() {
+  var input = document.getElementById('s2-pattern-files');
+  if (input) input.value = '';
+  refreshPatternFileList();
+}
+
 /** 各步骤产出物字段：保存表单时不得覆盖丢失 */
 const PIPELINE_OUTPUT_KEYS = [
   'step1_output_file', 'step1_download_url', 'step1_md_file', 'step1_md_download_url', 'step1_output_format',
@@ -650,6 +684,9 @@ function setupFormAutoSave() {
   if (s2Doc) s2Doc.addEventListener('input', updateStep2Readiness);
   if (s3Expert) s3Expert.addEventListener('input', updateStep3AlignModeHint);
   if (s3File) s3File.addEventListener('change', updateStep3AlignModeHint);
+  // 模式发现文件列表
+  var pfInput = document.getElementById('s2-pattern-files');
+  if (pfInput) pfInput.addEventListener('change', refreshPatternFileList);
 }
 
 /* ===== File upload name display ===== */
@@ -670,8 +707,9 @@ document.addEventListener('DOMContentLoaded', () => {
   });
   loadStep1SchemaAndTemplates();
   setupFormAutoSave();
-  // Preload model list so step selects are usable without opening model panel first.
   loadModels();
+  // 初始化列宽拖动调节
+  if (App.initResizableColumns) { setTimeout(App.initResizableColumns, 300); }
 });
 
 /* ===== Navigation ===== */
@@ -718,6 +756,8 @@ function switchPanel(step) {
   currentStep = step;
   document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
   document.getElementById('panel-' + step).classList.add('active');
+  // 切换面板后重新初始化列宽拖动
+  if (App.initResizableColumns) { setTimeout(App.initResizableColumns, 100); }
 
   const navSteps = document.getElementById('nav-steps');
   const brandEl = document.getElementById('nav-brand');
