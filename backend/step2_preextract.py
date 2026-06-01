@@ -233,7 +233,7 @@ def _ensure_blocks(ws, data_start: int, block_height: int, needed_blocks: int, a
         current += 1
 
 
-def _fill_into_template_data(ws, items: list) -> int:
+def _fill_into_template_data(ws, items: list, pipeline_id: str = "") -> int:
     """在 Step1 模板数据区按行填入知识，返回写入行数。"""
     anchor = find_anchor_columns(ws)
     if len(anchor) < 4:
@@ -244,6 +244,15 @@ def _fill_into_template_data(ws, items: list) -> int:
     block_height = detect_anchor_block_height(ws, data_start, anchor_cols)
     header_map = build_header_map(ws)
     field_cols = resolve_field_columns(header_map)
+
+    # 找到知识编号列（若有）
+    id_col = None
+    for h, c in header_map.items():
+        if _match_alias(h, ("知识编号", "knowledge_id")):
+            id_col = c
+            break
+    prefix = pipeline_id[:8] if pipeline_id else "KN"
+
     if not any(field_cols.values()):
         return 0
 
@@ -258,6 +267,10 @@ def _fill_into_template_data(ws, items: list) -> int:
         offset = idx % block_height
         row = data_start + block_idx * block_height + offset
         row_written = False
+
+        # 自动写入知识编号
+        if id_col:
+            _set_cell_value(ws, row, id_col, f"{prefix}-{row:04d}")
 
         # 1) Canonical field mapping (category/content/...).
         for field, col in field_cols.items():
@@ -288,7 +301,7 @@ def _fill_into_template_data(ws, items: list) -> int:
     return written
 
 
-def _append_standard_rows(ws, items: list) -> int:
+def _append_standard_rows(ws, items: list, pipeline_id: str = "") -> int:
     """无模板锚定列时，在表尾追加标准列行。"""
     header_map = build_header_map(ws)
     field_cols = resolve_field_columns(header_map)
@@ -300,7 +313,6 @@ def _append_standard_rows(ws, items: list) -> int:
                 ws.cell(1, col, value=h)
         header_map = build_header_map(ws)
         field_cols = resolve_field_columns(header_map)
-        col_id = header_map.get("知识编号") or header_map.get("knowledge_id")
 
     col_id_num = None
     for h, c in header_map.items():
@@ -308,12 +320,13 @@ def _append_standard_rows(ws, items: list) -> int:
             col_id_num = c
             break
 
+    prefix = pipeline_id[:8] if pipeline_id else "KN"
     start_row = (ws.max_row or 1) + 1
     for idx, raw in enumerate(items):
         item = normalize_item(raw)
         row = start_row + idx
         if col_id_num:
-            _set_cell_value(ws, row, col_id_num, f"KN-{row:04d}")
+            _set_cell_value(ws, row, col_id_num, f"{prefix}-{row:04d}")
         for field, col in field_cols.items():
             if col and item.get(field):
                 _set_cell_value(ws, row, col, item[field])
@@ -344,6 +357,7 @@ def write_preextract_excel(
     step1_path: Path | str | None,
     output_path: Path | str,
     items: list,
+    pipeline_id: str = "",
 ) -> dict:
     """
     生成萃取 Excel。
@@ -359,9 +373,9 @@ def write_preextract_excel(
         wb = openpyxl.load_workbook(output_path)
         ws = wb[wb.sheetnames[0]]
         used_template = True
-        filled_rows = _fill_into_template_data(ws, items)
+        filled_rows = _fill_into_template_data(ws, items, pipeline_id)
         if filled_rows == 0 and items:
-            filled_rows = _append_standard_rows(ws, items)
+            filled_rows = _append_standard_rows(ws, items, pipeline_id)
         wb.save(output_path)
         wb.close()
     else:
@@ -371,7 +385,7 @@ def write_preextract_excel(
         for col, h in enumerate(STANDARD_HEADERS, 1):
             ws.cell(1, col, value=h)
         _style_standard_sheet(ws)
-        filled_rows = _append_standard_rows(ws, items)
+        filled_rows = _append_standard_rows(ws, items, pipeline_id)
         wb.save(output_path)
         wb.close()
 

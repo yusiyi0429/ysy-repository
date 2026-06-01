@@ -29,6 +29,8 @@ except ImportError:
     print(json.dumps({"status": "error", "message": "pyyaml not installed"}, ensure_ascii=False))
     sys.exit(1)
 
+from field_aliases import FIELD_ALIASES as _BASE_FIELD_ALIASES, REVISION_COLUMN_MARKERS
+
 
 # Known sheet names that are NOT knowledge-item sheets
 NON_KNOWLEDGE_SHEETS = {"场景配置", "版本追踪", "配置", "config"}
@@ -36,34 +38,19 @@ NON_KNOWLEDGE_SHEETS = {"场景配置", "版本追踪", "配置", "config"}
 # 记录未填子场景时的分组占位名，不用于 SKILL 正文分节标题
 EMPTY_SUB_FALLBACK = "未分子场景"
 
-REVISION_COLUMN_MARKERS = ("修订状态", "原始内容", "修订内容", "修订说明", "修订时间")
-
 CONTENT_HEADER_MARKERS = (
     "具体方法", "知识描述", "知识内容", "数据规则", "知识要点", "专家经验",
     "方法", "描述", "内容", "规则", "要点", "输出", "引用", "逻辑", "术语",
 )
 
-# Possible column names for knowledge fields (aliases)
+# Possible column names for knowledge fields — extends shared base with sheet-structural keys
 FIELD_ALIASES = {
-    "知识编号": ["知识编号", "编号", "KN编号", "知识ID"],
-    "知识分类": ["知识分类", "分类", "类型", "知识要点", "知识"],
-    "知识描述": ["知识描述", "描述", "知识内容", "内容", "数据规则", "具体方案", "具体方法", "知识说明"],
+    **_BASE_FIELD_ALIASES,
     "场景说明": ["场景说明", "场景内容"],
     "子场景说明": ["子场景说明", "子场景内容"],
-    "适用条件": ["适用条件", "触发条件", "条件", "专家经验"],
-    "判断逻辑": ["判断逻辑", "判断规则", "逻辑", "规则引用"],
-    "反模式/踩坑提示": ["反模式/踩坑提示", "反模式", "踩坑提示", "注意事项"],
-    "来源文档": ["来源文档", "来源"],
-    "来源位置": ["来源位置", "位置", "页码"],
-    "原文摘录": ["原文摘录", "摘录"],
-    "置信度": ["置信度", "可信度"],
-    "贡献专家": ["贡献专家", "贡献人"],
-    "确认专家": ["确认专家", "确认人"],
-    "备注": ["备注", "说明", "修订说明"],
     "场景": ["场景"],
     "子场景": ["子场景"],
     "步骤": ["步骤"],
-    "专业术语": ["专业术语", "关键输出"],
     "知识引用": ["知识引用"],
     "修订状态": ["修订状态", "修改"],
     "修订内容": ["修订内容"],
@@ -648,6 +635,7 @@ def format_knowledge_item(rec: dict) -> str:
         "反模式/踩坑提示", "来源文档", "来源位置", "原文摘录",
         "置信度", "贡献专家", "确认专家", "备注",
         "场景", "子场景", "子场景说明", "步骤", "_source_sheet",
+        "经验判断", "适用边界", "例外情形", "证据数", "突破数",
     }
     for key, val in rec.items():
         if key not in common_field_names and val and str(val).strip():
@@ -664,6 +652,17 @@ def format_knowledge_item(rec: dict) -> str:
     anti_pattern = rec.get("反模式/踩坑提示", "")
     if anti_pattern:
         parts.append(f"  - 反模式：{anti_pattern}")
+
+    # L2 隐性上下文层
+    exp = rec.get("经验判断", "")
+    if exp:
+        parts.append(f"  - 经验判断（专家）：{exp}")
+    boundary = rec.get("适用边界", "")
+    if boundary:
+        parts.append(f"  - 适用边界：{boundary}")
+    exception = rec.get("例外情形", "")
+    if exception:
+        parts.append(f"  - 例外情形：{exception}")
 
     source = rec.get("来源文档", "")
     source_loc = rec.get("来源位置", "")

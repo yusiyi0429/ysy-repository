@@ -55,6 +55,16 @@ def _collect_answer(rec: dict) -> str:
     anti = str(rec.get("反模式/踩坑提示", "")).strip()
     if anti:
         lines.append(f"反模式/踩坑：{anti}")
+    # L2 隐性上下文层
+    exp = str(rec.get("经验判断", "")).strip()
+    if exp:
+        lines.append(f"经验判断（专家）：{exp}")
+    boundary = str(rec.get("适用边界", "")).strip()
+    if boundary:
+        lines.append(f"适用边界：{boundary}")
+    exception = str(rec.get("例外情形", "")).strip()
+    if exception:
+        lines.append(f"例外情形：{exception}")
     source = str(rec.get("来源文档", "")).strip()
     loc = str(rec.get("来源位置", "")).strip()
     if source:
@@ -114,6 +124,9 @@ def generate_cot_markdown(
         logic = str(rec.get("判断逻辑", "")).strip()
         anti = str(rec.get("反模式/踩坑提示", "")).strip()
         confidence = str(rec.get("置信度", "")).strip()
+        exp = str(rec.get("经验判断", "")).strip()
+        boundary = str(rec.get("适用边界", "")).strip()
+        exception = str(rec.get("例外情形", "")).strip()
 
         lines.append(f"## {item_id} · {title}")
         lines.append("")
@@ -157,6 +170,16 @@ def generate_cot_markdown(
         if anti:
             lines.append(f"**风险校验**：{anti}")
             lines.append("")
+        if exp or boundary or exception:
+            lines.append("### 4. 专家经验校正")
+            lines.append("")
+            if exp:
+                lines.append(f"- 经验判断：{exp}")
+            if boundary:
+                lines.append(f"- 适用边界：{boundary}")
+            if exception:
+                lines.append(f"- 例外情形：{exception}")
+            lines.append("")
         lines.append("---")
         lines.append("")
 
@@ -192,6 +215,24 @@ def generate_qa_pairs(records: list, scenario_name: str) -> list[dict]:
                 "source_document": qa["source_document"],
                 "source_location": qa["source_location"],
                 "type": "anti_pattern",
+            })
+        # 隐性经验追溯 QA（有经验判断/适用边界的条目额外生成）
+        tacit = str(rec.get("经验判断", "")).strip()
+        if tacit:
+            pairs.append({
+                "id": f"{item_id}-tacit",
+                "question": f"关于「{_item_title(rec)}」，专家的经验判断是什么？什么情况下可能不适用？",
+                "answer": (
+                    f"专家经验判断：{tacit}"
+                    + (f"\n适用边界：{str(rec.get('适用边界', '')).strip()}" if str(rec.get('适用边界', '')).strip() else "")
+                    + (f"\n例外情形：{str(rec.get('例外情形', '')).strip()}" if str(rec.get('例外情形', '')).strip() else "")
+                ),
+                "category": qa["category"],
+                "sub_scenario": qa["sub_scenario"],
+                "confidence": qa["confidence"],
+                "source_document": qa["source_document"],
+                "source_location": qa["source_location"],
+                "type": "tacit",
             })
     return pairs
 

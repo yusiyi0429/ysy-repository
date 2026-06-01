@@ -987,7 +987,28 @@ def api_rollback_pipeline(pipeline_id, step):
             pipeline["step_status"][str(s)] = "pending"
 
         sd = pipeline.setdefault("step_data", {})
-        for key in keys_to_clear_from_step(step):
+        keys = keys_to_clear_from_step(step)
+
+        # 将下游产出文件移入 _trash（不直接删除，便于追溯）
+        from pipeline_artifacts import downstream_output_keys, auxiliary_step_data_keys
+        _trash_dir = WORKSPACE / "_trash"
+        for key in downstream_output_keys(step):
+            filename = str(sd.get(key, "")).strip()
+            if not filename:
+                continue
+            file_path = WORKSPACE / os.path.basename(filename)
+            if file_path.exists():
+                try:
+                    _trash_dir.mkdir(parents=True, exist_ok=True)
+                    dest = _trash_dir / file_path.name
+                    if dest.exists():
+                        dest = _trash_dir / f"{file_path.stem}_{uuid.uuid4().hex[:6]}{file_path.suffix}"
+                    shutil.move(str(file_path), str(dest))
+                except Exception:
+                    pass
+            sd.pop(key, None)
+
+        for key in auxiliary_step_data_keys(step):
             sd.pop(key, None)
 
         pipeline["current_step"] = step
@@ -2470,6 +2491,7 @@ def _write_step2_preextract_excel(pipeline_id: str, extracted_items: list):
         step1_path=step1_path,
         output_path=output_path,
         items=extracted_items or [],
+        pipeline_id=pipeline_id,
     )
     return output_name, meta
 
@@ -4871,7 +4893,7 @@ def api_step4_apply_notes():
 
         output_name = f"final_{pipeline_id[:8]}_{datetime.now().strftime('%H%M%S')}.xlsx"
         output_path = os.path.join(WORKSPACE, output_name)
-        revision_count = process_workbook(source_file_path, final_notes, output_path, layouts=layout_map)
+        revision_count = process_workbook(source_file_path, final_notes, output_path, layouts=layout_map, tacit_annotations=tacit_annotations)
         md_name, md_url = _maybe_generate_markdown_artifact(
             pipeline_id,
             output_name,
@@ -4893,6 +4915,8 @@ def api_step4_apply_notes():
                     if tacit_annotations:
                         sd["step4_tacit_annotations"] = [
                             {"note_id": a.get("note_id"), "action": a.get("action"),
+                             "knowledge_id": a.get("knowledge_id", ""),
+                             "category": a.get("category", "经验判断"),
                              "question": a.get("question"), "answer": a.get("answer")}
                             for a in tacit_annotations if a.get("answer")
                         ]
@@ -4974,6 +4998,141 @@ def api_step4_confirm_as_is():
         })
     except Exception as e:
         return jsonify({"status": "error", "error": f"确认对齐稿失败: {str(e)}"})
+
+
+# ─── Interview API (方案三) ──────────────────────────────────────
+
+@app.route("/api/interview/probe", methods=["POST"])
+def api_interview_probe():
+    """结构化访谈追问生成：输入一条知识 + 方法 → LLM 生成追问。"""
+    data = request.get_json(force=True) if request.is_json else {}
+    method = data.get("method", "case_reverse")
+    knowledge_item = data.get("knowledge", {})
+    model_name = data.get("model", "")
+
+    if not knowledge_item:
+        return jsonify({"status": "error", "error": "请提供知识条目"})
+    if method not in ("case_reverse", "contrast_probe", "limit_hypothesis"):
+        return jsonify({"status": "error", "error": f"未知访谈方法: {method}"})
+
+    if not model_name:
+        models_list = load_llm_config()
+        if models_list:
+            model_name = models_list[0]["name"]
+    model_cfg = get_model_by_name(model_name)
+    if not model_cfg:
+        return jsonify({"status": "error", "error": f"模型不存在: {model_name}"})
+
+    from interview_session import build_interview_prompt, parse_interview_result
+    system_prompt, user_prompt = build_interview_prompt(method, knowledge_item)
+
+    try:
+        result = call_llm_with_retry(model_cfg, [
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": user_prompt},
+        ], stream=False, temperature=0.3, max_tokens=1024)
+        raw = extract_assistant_content(result) if isinstance(result, dict) else str(result)
+        probes = parse_interview_result(raw)
+        return jsonify({
+            "status": "ok",
+            "method": method,
+            "method_name": INTERVIEW_METHODS.get(method, {}).get("name", method) if "INTERVIEW_METHODS" in dir() else method,
+            "probes": probes,
+        })
+    except Exception as e:
+        return jsonify({"status": "error", "error": f"访谈追问生成失败: {str(e)}"})
+
+
+# ─── Validation Replay API (方案四) ──────────────────────────────
+
+@app.route("/api/validate/replay", methods=["POST"])
+def api_validate_replay():
+    """显性化校验闭环：上传历史案例，用知识库判断，与专家结论对比。"""
+    model_name = request.form.get("model", "")
+    pipeline_id = request.form.get("pipeline_id", "")
+    cases_json = request.form.get("cases", "")
+    cases_file = request.files.get("cases_file")
+
+    # 加载案例
+    cases = []
+    if cases_json:
+        try:
+            cases = json.loads(cases_json)
+        except json.JSONDecodeError:
+            return jsonify({"status": "error", "error": "案例 JSON 格式错误"})
+    elif cases_file:
+        try:
+            cases = json.load(cases_file)
+        except json.JSONDecodeError:
+            text = cases_file.read().decode("utf-8", errors="replace")
+            try:
+                cases = json.loads(text)
+            except json.JSONDecodeError:
+                return jsonify({"status": "error", "error": "案例文件 JSON 格式错误"})
+    if not cases:
+        return jsonify({"status": "error", "error": "请提供至少 1 个历史案例"})
+
+    # 加载知识库文本
+    knowledge_text = ""
+    if pipeline_id:
+        with _pipelines_lock:
+            pipelines = load_pipelines()
+            for p in pipelines:
+                if p["id"] == pipeline_id:
+                    sd = p.get("step_data", {})
+                    resolved, _src = resolve_knowledge_workbook_path(WORKSPACE, sd, purpose="compile")
+                    if resolved:
+                        from excel_to_skill import read_excel_knowledge
+                        records, _ = read_excel_knowledge(str(resolved))
+                        from excel_to_skill import format_knowledge_item
+                        knowledge_text = "\n\n".join(format_knowledge_item(r) for r in records)
+                    break
+    if not knowledge_text:
+        return jsonify({"status": "error", "error": "未找到知识库内容，请提供 pipeline_id"})
+
+    if not model_name:
+        models_list = load_llm_config()
+        if models_list:
+            model_name = models_list[0]["name"]
+    model_cfg = get_model_by_name(model_name)
+    if not model_cfg:
+        return jsonify({"status": "error", "error": "模型未配置"})
+
+    from validation_replay import build_validation_prompt, compare_predictions, generate_replay_report
+    system_prompt, user_prompt = build_validation_prompt(knowledge_text, cases)
+
+    try:
+        result = call_llm_with_retry(model_cfg, [
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": user_prompt},
+        ], stream=False, temperature=0.1, max_tokens=4096)
+        raw = extract_assistant_content(result) if isinstance(result, dict) else str(result)
+        try:
+            predictions = json.loads(raw)
+            if not isinstance(predictions, list):
+                predictions = [{"case_id": "unknown", "prediction": raw[:200]}]
+        except json.JSONDecodeError:
+            predictions = [{"case_id": "unknown", "prediction": raw[:200]}]
+
+        comparison = compare_predictions(predictions, cases)
+        report = generate_replay_report(comparison, cases, predictions)
+
+        report_name = f"validation_replay_{uuid.uuid4().hex[:8]}.md"
+        report_path = WORKSPACE / report_name
+        report_path.write_text(report, encoding="utf-8")
+
+        return jsonify({
+            "status": "ok",
+            "hit_rate": comparison["hit_rate"],
+            "hits": comparison["hits"],
+            "total": comparison["total_cases"],
+            "mismatch_count": comparison["mismatch_count"],
+            "mismatches": comparison["mismatches"],
+            "report_name": report_name,
+            "download_url": f"/downloads/{report_name}",
+        })
+    except Exception as e:
+        return jsonify({"status": "error", "error": f"校验回放失败: {str(e)}"})
 
 
 # ─── Main ─────────────────────────────────────────────────────────

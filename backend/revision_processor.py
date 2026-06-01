@@ -60,14 +60,20 @@ def create_backup(input_path):
 
 
 def create_revision_columns(ws, start_col, header_rows=1):
-    """创建修订信息列（表头与模板表头行对齐，避免覆盖第 1 行场景锚定列名）。"""
-    headers = ['修订状态', '原始内容', '修订内容', '修订说明', '修订时间']
+    """创建修订信息列 + L2 隐性注释列（经验判断/适用边界/例外情形）。"""
+    headers = ['修订状态', '原始内容', '修订内容', '修订说明', '修订时间',
+               '经验判断', '适用边界', '例外情形']
     header_rows = max(1, int(header_rows or 1))
     for i, header in enumerate(headers):
         col = start_col + i
         cell = ws.cell(row=1, column=col, value=header)
-        cell.font = Font(bold=True, color=COLOR_MAP['header_text'])
-        cell.fill = PatternFill(start_color=COLOR_MAP['header'], end_color=COLOR_MAP['header'], fill_type='solid')
+        # 隐性列用绿色表头区分
+        if header in ('经验判断', '适用边界', '例外情形'):
+            cell.font = Font(bold=True, color='FFFFFF')
+            cell.fill = PatternFill(start_color='16A34A', end_color='16A34A', fill_type='solid')
+        else:
+            cell.font = Font(bold=True, color=COLOR_MAP['header_text'])
+            cell.fill = PatternFill(start_color=COLOR_MAP['header'], end_color=COLOR_MAP['header'], fill_type='solid')
         cell.alignment = Alignment(horizontal='center', vertical='center')
         if header_rows > 1:
             ws.merge_cells(
@@ -275,8 +281,8 @@ def apply_revision(ws, action_data, revision_col):
     return True
 
 
-def process_workbook(input_path, expert_notes, output_path, *, layouts=None):
-    """处理整个工作簿。layouts: 可选，来自 workbook_layout.build_revision_context。"""
+def process_workbook(input_path, expert_notes, output_path, *, layouts=None, tacit_annotations=None):
+    """处理整个工作簿。layouts: 可选。tacit_annotations: L2 隐性注释列表。"""
     wb = load_workbook(input_path)
 
     if layouts is None:
@@ -314,8 +320,15 @@ def process_workbook(input_path, expert_notes, output_path, *, layouts=None):
         if layouts and sheet_name in layouts:
             header_rows = layouts[sheet_name].get("header_rows", 1)
 
-        # 创建修订信息列
-        create_revision_columns(ws, revision_col, header_rows)
+        # 创建修订信息列（含隐性注释三列）
+        created_headers = create_revision_columns(ws, revision_col, header_rows)
+
+        # 找到隐性列偏移（经验判断/适用边界/例外情形 在创建列列表中的位置）
+        tacit_col_offset = {
+            '经验判断': created_headers.index('经验判断') if '经验判断' in created_headers else -1,
+            '适用边界': created_headers.index('适用边界') if '适用边界' in created_headers else -1,
+            '例外情形': created_headers.index('例外情形') if '例外情形' in created_headers else -1,
+        }
 
         # 按行号排序修订记录，从后往前处理以避免行号偏移问题
         sorted_notes = sorted(notes, key=lambda x: x.get('row', 1), reverse=True)
@@ -325,15 +338,35 @@ def process_workbook(input_path, expert_notes, output_path, *, layouts=None):
             action = note.get('action', '').lower()
             original_row = note.get('row', 1)
 
-            # 从后往前处理时，insert_rows 只影响当前行及之后的行
-            # 因为我们是从大到小处理，所以不需要调整行号
             adjusted_row = original_row
-
-            # 更新note的行号为调整后值
             note['row'] = adjusted_row
 
             if apply_revision(ws, note, revision_col):
                 total_processed += 1
+
+        # 写入隐性注释到对应行
+        if tacit_annotations:
+            for ta in tacit_annotations:
+                ta_row = ta.get('row')
+                if not ta_row:
+                    continue
+                cat = ta.get('category', '')
+                answer = ta.get('answer', '')
+                if not answer:
+                    continue
+                if cat in tacit_col_offset and tacit_col_offset[cat] >= 0:
+                    col = revision_col + tacit_col_offset[cat]
+                    try:
+                        ws.cell(row=ta_row, column=col, value=answer)
+                    except Exception:
+                        pass
+                # 向后兼容：无 category 时写入经验判断
+                elif not cat:
+                    col = revision_col + tacit_col_offset.get('经验判断', 0)
+                    try:
+                        ws.cell(row=ta_row, column=col, value=answer)
+                    except Exception:
+                        pass
 
     # 保存修订后的文件
     wb.save(output_path)

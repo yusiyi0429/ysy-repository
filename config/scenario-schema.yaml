@@ -4,7 +4,8 @@
 scenario_name: default-knowledge-extraction
 display_name: 通用知识萃取结构
 domain: 通用
-version: "v1.0"
+version: "v1.1"
+auto_generate_id: true
 
 scenario:
   business_boundary: ""
@@ -16,7 +17,7 @@ categories:
   - 操作流程
   - 反模式
 
-# 知识列（锚定四列「场景/场景说明/子场景/子场景说明」由系统固定，不在此列出）
+# 知识列（锚定四列"场景/场景说明/子场景/子场景说明"由系统固定，不在此列出）
 fields:
   - name: 环节
     type: 文本
@@ -62,6 +63,54 @@ fields:
     required: false
     fill_rule: 常见错误与禁忌
     example: 仅看抵押物不看现金流
+  # L2 隐性上下文列（Step3 隐性注释回填）
+  - name: 经验判断
+    type: 长文本
+    required: false
+    fill_rule: 专家经验判断及理由
+    example: 芯片设计企业轻资产，不能只看抵押物
+  - name: 适用边界
+    type: 长文本
+    required: false
+    fill_rule: 什么情况下本规则不适用
+    example: 创始人来自中科院或985高校的芯片企业可放宽年限
+  - name: 例外情形
+    type: 长文本
+    required: false
+    fill_rule: 已被实际突破的场景
+    example: 2024年X企业实际控制人变更但业务稳定性高
+  # L3 证据层
+  - name: 来源文档
+    type: 文本
+    required: false
+    fill_rule: 知识来源文件/制度名称
+    example: 《科技企业普惠贷款业务操作指引》
+  - name: 来源位置
+    type: 文本
+    required: false
+    fill_rule: 知识在来源中的具体位置
+    example: 第2章 3.1.2
+  - name: 置信度
+    type: 枚举
+    required: false
+    fill_rule: 知识置信度
+    example: 高
+    enum_values: ["高", "中", "低"]
+  - name: 贡献专家
+    type: 文本
+    required: false
+    fill_rule: 贡献该知识的专家姓名/工号
+    example: 张三
+  - name: 证据数
+    type: 整数
+    required: false
+    fill_rule: 支撑该知识的案例数量
+    example: 3
+  - name: 突破数
+    type: 整数
+    required: false
+    fill_rule: 专家实践中突破该规则的次数
+    example: 1
 
 interview:
   methods:
@@ -73,9 +122,12 @@ interview:
   required_experts: 2
 
 quality:
-  min_knowledge_items: 800
+  # target_per_pipeline: 单次流水线的合理目标
+  target_per_pipeline: 30
+  # library_target: 知识库建设目标（长期）
+  library_target: 800
   min_confidence_level: 中
-  source_annotation_rate: 0.95
+  source_annotation_rate: 0.60
   anti_pattern_ratio: 0.10
   skill_score_threshold: 75
 

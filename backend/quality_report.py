@@ -23,35 +23,9 @@ except ImportError:
     print(json.dumps({"status": "error", "message": "pyyaml not installed"}, ensure_ascii=False))
     sys.exit(1)
 
+from field_aliases import FIELD_ALIASES, resolve_header
 
 NON_KNOWLEDGE_SHEETS = {"场景配置", "版本追踪", "配置", "config", "来源索引"}
-
-FIELD_ALIASES = {
-    "知识编号": ["知识编号", "编号", "KN编号", "知识ID"],
-    "知识分类": ["知识分类", "分类", "类型", "知识要点", "知识"],
-    "知识描述": ["知识描述", "描述", "知识内容", "内容", "数据规则", "具体方案", "具体方法", "场景说明", "子场景说明", "知识说明"],
-    "适用条件": ["适用条件", "触发条件", "条件", "专家经验"],
-    "判断逻辑": ["判断逻辑", "判断规则", "逻辑", "规则引用"],
-    "反模式/踩坑提示": ["反模式/踩坑提示", "反模式", "踩坑提示", "注意事项"],
-    "来源文档": ["来源文档", "来源"],
-    "来源位置": ["来源位置", "位置", "页码"],
-    "原文摘录": ["原文摘录", "摘录"],
-    "置信度": ["置信度", "可信度"],
-    "贡献专家": ["贡献专家", "贡献人"],
-    "确认专家": ["确认专家", "确认人"],
-    "备注": ["备注", "说明", "修订说明"],
-}
-
-
-def _resolve_header(raw_header: str) -> str:
-    """Resolve a raw Excel header to a canonical field name using aliases."""
-    if not raw_header:
-        return ""
-    raw = str(raw_header).strip()
-    for canonical, aliases in FIELD_ALIASES.items():
-        if raw in aliases:
-            return canonical
-    return raw
 
 
 def _is_knowledge_sheet(ws) -> bool:
@@ -92,7 +66,7 @@ def read_excel_data(excel_path: str) -> tuple:
             ws = wb[sn]
             if _is_knowledge_sheet(ws):
                 headers_raw = [cell.value for cell in next(ws.iter_rows(min_row=1, max_row=1), [])]
-                headers = [_resolve_header(h) for h in headers_raw]
+                headers = [resolve_header(h) for h in headers_raw]
                 for row in ws.iter_rows(min_row=2, values_only=True):
                     if not row or not any(row):
                         continue
@@ -128,20 +102,24 @@ def score_completeness(records: list, config: dict) -> dict:
     """完整性评分 (0-25)"""
     total = len(records)
     quality_cfg = config.get("quality", {})
-    min_items = quality_cfg.get("min_knowledge_items", 800)
+    target = quality_cfg.get("target_per_pipeline", quality_cfg.get("min_knowledge_items", 30))
 
     # 条目数量分 (0-10)
-    if total >= min_items:
+    if total >= target:
         quantity_score = 10
-    elif total >= min_items * 0.5:
-        quantity_score = round(10 * total / min_items, 1)
+    elif total >= target * 0.5:
+        quantity_score = round(10 * total / max(target, 1), 1)
     else:
-        quantity_score = round(5 * total / max(min_items * 0.5, 1), 1)
+        quantity_score = round(5 * total / max(target * 0.5, 1), 1)
 
-    # 必填字段填充率 (0-10)
-    required_fields = ["知识编号", "知识分类", "知识描述", "适用条件"]
+    # 必填字段填充率 (0-10) — 从 schema fields[].required 动态读取
+    fields_cfg = config.get("fields", [])
+    if fields_cfg:
+        required_fields = [f["name"] for f in fields_cfg if f.get("required")]
+    else:
+        required_fields = ["知识编号", "知识分类", "知识描述", "适用条件"]
     filled_count = 0
-    total_slots = len(records) * len(required_fields)
+    total_slots = len(records) * max(len(required_fields), 1)
     for rec in records:
         for field in required_fields:
             if str(rec.get(field, "")).strip():
@@ -166,14 +144,14 @@ def score_completeness(records: list, config: dict) -> dict:
         "score": score,
         "max_score": 25,
         "details": {
-            "quantity": {"score": quantity_score, "max": 10, "total_items": total, "target": min_items},
+            "quantity": {"score": quantity_score, "max": 10, "total_items": total, "target": target},
             "fill_rate": {"score": fill_score, "max": 10, "rate": round(fill_rate, 2)},
             "category_coverage": {"score": category_score, "max": 5, "covered": len(categories), "expected": len(expected_categories)},
         }
     }
 
 
-def score_accuracy(records: list) -> dict:
+def score_accuracy(records: list, config: dict = None) -> dict:
     """准确性评分 (0-25)"""
     total = len(records)
 
@@ -188,9 +166,12 @@ def score_accuracy(records: list) -> dict:
     conf_score = min(conf_score, 15)
 
     # 知识编号规范性 (0-5)
-    valid_ids = sum(1 for r in records if str(r.get("知识编号", "")).startswith("KN-"))
+    valid_ids = sum(1 for r in records if str(r.get("知识编号", "")).strip().startswith(("KN-", "KN")))
     id_ratio = valid_ids / max(total, 1)
     id_score = round(5 * id_ratio, 1)
+    # auto_generate_id 时放宽：有编号即满分（已由系统生成）
+    if (config or {}).get("auto_generate_id") and valid_ids > 0:
+        id_score = 5
 
     # 描述完整性 (0-5)
     desc_with_condition = sum(1 for r in records if str(r.get("知识描述", "")).strip() and str(r.get("适用条件", "")).strip())
@@ -304,7 +285,49 @@ def get_grade(total_score: float) -> str:
         return "D"
 
 
-def generate_report(records: list, config: dict, scores: dict, total_score: float, grade: str) -> str:
+def _compute_tacitness(records: list) -> tuple[float, float]:
+    """计算隐性度指标：tacit_ratio 与 case_derived_ratio。"""
+    total = max(len(records), 1)
+    with_tacit = sum(
+        1 for r in records
+        if str(r.get("经验判断", "")).strip()
+        or str(r.get("适用边界", "")).strip()
+        or str(r.get("例外情形", "")).strip()
+    )
+    tacit_ratio = round(with_tacit / total, 3)
+    with_case = sum(
+        1 for r in records
+        if "案例复盘" in str(r.get("来源文档", "") + r.get("来源", ""))
+        or str(r.get("证据数", "")).strip().isdigit() and int(str(r.get("证据数", "")).strip()) > 0
+    )
+    case_ratio = round(with_case / total, 3)
+    return tacit_ratio, case_ratio
+
+
+def _compute_evidence_strength(records: list) -> dict:
+    """计算证据强度统计。"""
+    total = max(len(records), 1)
+    evidence_counts = []
+    break_counts = []
+    for r in records:
+        ev = str(r.get("证据数", "")).strip()
+        br = str(r.get("突破数", "")).strip()
+        evidence_counts.append(int(ev) if ev.isdigit() else 0)
+        break_counts.append(int(br) if br.isdigit() else 0)
+    avg_evidence = round(sum(evidence_counts) / total, 1)
+    avg_breaks = round(sum(break_counts) / total, 1)
+    with_breaks = sum(1 for b in break_counts if b > 0)
+    return {
+        "avg_evidence": avg_evidence,
+        "avg_breaks": avg_breaks,
+        "items_with_breaks": with_breaks,
+        "total_items": total,
+    }
+
+
+def generate_report(records: list, config: dict, scores: dict, total_score: float, grade: str,
+                    tacit_ratio: float = 0, case_ratio: float = 0,
+                    evidence_stats: dict = None) -> str:
     """生成 Markdown 质量报告"""
     scenario = config.get("display_name", "未命名场景")
     total_items = len(records)
@@ -331,6 +354,17 @@ def generate_report(records: list, config: dict, scores: dict, total_score: floa
 
     lines.append(f"| **总计** | **{total_score:.1f}** | **100** | **{total_score:.0f}%** |")
     lines.append("")
+
+    # 隐性化成效
+    if evidence_stats:
+        lines.append("## 隐性化成效")
+        lines.append("")
+        lines.append(f"- **隐性度（tacit_ratio）**：{tacit_ratio * 100:.1f}%（有专家经验判断/适用边界/例外情形的条目占比）")
+        lines.append(f"- **案例衍生占比**：{case_ratio * 100:.1f}%（来自案例复盘或已被案例支撑的条目占比）")
+        if evidence_stats:
+            lines.append(f"- **平均证据数**：{evidence_stats['avg_evidence']}（每条知识被多少案例支撑）")
+            lines.append(f"- **被突破条目**：{evidence_stats['items_with_breaks']}/{evidence_stats['total_items']}（专家实践中曾被突破的规则数）")
+        lines.append("")
 
     # 改进建议
     lines.append("## 改进建议")
@@ -360,22 +394,31 @@ def quality_report(excel_path: str, config_path: str) -> dict:
 
     scores = {
         "完整性": score_completeness(records, config),
-        "准确性": score_accuracy(records),
+        "准确性": score_accuracy(records, config),
         "可操作性": score_operability(records),
         "反模式覆盖": score_anti_pattern(records),
         "来源可溯": score_traceability(records),
     }
 
     total_score = sum(s["score"] for s in scores.values())
+
+    # 隐性化成效（展示但不纳入总分，避免初创场景负激励）
+    tacit_ratio, case_ratio = _compute_tacitness(records)
+    evidence_stats = _compute_evidence_strength(records)
+
     grade = get_grade(total_score)
 
-    report_md = generate_report(records, config, scores, total_score, grade)
+    report_md = generate_report(records, config, scores, total_score, grade,
+                                tacit_ratio, case_ratio, evidence_stats)
 
     return {
         "status": "ok",
         "total_score": round(total_score, 1),
         "grade": grade,
         "scores": scores,
+        "tacit_ratio": tacit_ratio,
+        "case_derived_ratio": case_ratio,
+        "evidence_strength": evidence_stats,
         "report_markdown": report_md,
     }
 
