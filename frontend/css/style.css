@@ -2057,3 +2057,55 @@ a { color: var(--red); text-decoration: none; }
 .rc-list { margin: 4px 0 0 16px; font-size: 11px; color: var(--text-muted); }
 .rc-list li { margin-bottom: 2px; }
 
+/* ===== Interview Probe Modal (方案三) ===== */
+.interview-overlay {
+  display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.45); z-index: 1100;
+  justify-content: center; align-items: center; padding: 24px;
+}
+.interview-overlay.active { display: flex; }
+.interview-dialog {
+  background: #fff; border-radius: 12px; width: 100%; max-width: 680px;
+  max-height: 85vh; display: flex; flex-direction: column; overflow: hidden;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.2);
+}
+.interview-header {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 14px 20px; border-bottom: 2px solid var(--red); flex-shrink: 0;
+}
+.interview-title { font-size: 15px; font-weight: 700; color: var(--text); display: flex; align-items: center; gap: 8px; }
+.interview-close { width: 28px; height: 28px; border: none; border-radius: 4px; background: var(--border-light); cursor: pointer; font-size: 16px; }
+.interview-close:hover { background: var(--error); color: #fff; }
+.interview-body { flex: 1; overflow-y: auto; padding: 16px 20px; }
+.interview-method-tabs { display: flex; gap: 6px; margin-bottom: 14px; }
+.interview-method-tab {
+  padding: 6px 12px; border: 1px solid var(--border); border-radius: 16px;
+  background: #fff; font-size: 12px; cursor: pointer; transition: all 0.2s; font-family: var(--font-cn);
+}
+.interview-method-tab:hover { border-color: var(--red); }
+.interview-method-tab.active { background: var(--red); color: #fff; border-color: var(--red); }
+.interview-probe-list { display: flex; flex-direction: column; gap: 10px; }
+.interview-probe-card {
+  padding: 12px 14px; border: 1px solid var(--border); border-radius: var(--radius);
+  background: #fafbfc; transition: all 0.2s;
+}
+.interview-probe-card:hover { border-color: var(--red-light); }
+.interview-probe-q { font-size: 13px; font-weight: 600; color: var(--text); margin-bottom: 6px; }
+.interview-probe-hint { font-size: 11px; color: var(--text-muted); margin-bottom: 8px; }
+.interview-probe-answer { width: 100%; min-height: 48px; padding: 6px 10px; border: 1px solid var(--border); border-radius: var(--radius); font-size: 12px; font-family: var(--font-cn); resize: vertical; }
+.interview-probe-answer:focus { outline: none; border-color: var(--red); }
+.interview-probe-cat { font-size: 10px; padding: 1px 6px; border-radius: 8px; background: #f0fdf4; color: #16a34a; margin-left: 8px; }
+.interview-footer { padding: 12px 20px; border-top: 1px solid var(--border); display: flex; justify-content: flex-end; gap: 8px; flex-shrink: 0; }
+.interview-loading { text-align: center; padding: 30px; color: var(--text-muted); }
+
+/* ===== Validation Replay (方案四) ===== */
+.validate-section { margin-top: 14px; padding: 14px; border: 1px solid var(--border); border-radius: var(--radius); background: #fafbfc; }
+.validate-section h4 { font-size: 13px; font-weight: 700; margin-bottom: 10px; }
+.validate-case-row { display: flex; gap: 8px; margin-bottom: 8px; align-items: center; }
+.validate-case-row input { flex: 1; padding: 6px 10px; border: 1px solid var(--border); border-radius: var(--radius); font-size: 12px; }
+.validate-case-row select { padding: 6px 10px; border: 1px solid var(--border); border-radius: var(--radius); font-size: 12px; width: 120px; }
+.validate-cases { display: flex; flex-direction: column; gap: 6px; max-height: 200px; overflow-y: auto; }
+.validate-result { margin-top: 12px; }
+.validate-hit-bar { height: 8px; background: var(--border-light); border-radius: 4px; overflow: hidden; margin: 8px 0; }
+.validate-hit-fill { height: 100%; border-radius: 4px; transition: width 0.5s; }
+.validate-mismatch { padding: 8px 10px; margin: 6px 0; border-radius: var(--radius); border-left: 3px solid var(--error); background: #fef2f2; font-size: 12px; }
+

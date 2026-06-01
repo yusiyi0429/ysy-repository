@@ -1476,7 +1476,7 @@ function resolveModelName(selectId) {
 }
 
 function refreshModelSelects() {
-  const selects = ['s2-model', 's3-model', 's5-model'];
+  const selects = ['s2-model', 's3-model', 's5-model', 's5-validate-model'];
   selects.forEach(id => {
     const el = document.getElementById(id);
     if (!el) return;
@@ -2147,6 +2147,7 @@ async function step2SkillExtract() {
               ${mdFile ? `<button class="s2-result-btn" onclick="previewStep5File('${escapeHtml(mdFile)}','Step2 萃取 Markdown 预览')">&#128065; 预览/编辑 Markdown</button>` : ''}
               ${(!mdFlow) ? '<button class="s2-result-btn" onclick="editStep2Preextract()">&#9998; 在线编辑</button>' : ''}
               <button type="button" class="s2-result-btn copy" id="s2-copy-extract-btn" onclick="copyExtractResult()">&#128203; 复制 LLM 原文</button>
+              <button type="button" class="s2-result-btn" onclick="openInterviewFromExtract()" style="background:#f0fdf4;color:#16a34a;border-color:#86efac;">&#128269; 深挖隐性知识</button>
             </div>
             <div class="s2-result-detail" id="s2-result-text" style="max-height:200px;overflow-y:auto;margin-top:8px;font-size:12px;color:#666;">
               <pre>${escapeHtml(result.extracted || '').substring(0, 1000)}${(result.extracted || '').length > 1000 ? '...' : ''}</pre>
@@ -3763,6 +3764,209 @@ async function saveExcelEditor() {
     persistPipeline = function(extraStepData, extraFields) { return A.PipelineState.persist(extraStepData, extraFields); };
   }
 })();
+
+// ═══════════════════════════════════════════════════════════════════
+// 方案三: 结构化访谈模块
+// ═══════════════════════════════════════════════════════════════════
+
+let _interviewCtx = { knowledge: null, method: 'case_reverse', probes: [] };
+
+function openInterviewFromExtract() {
+  // 从 Step2 萃取结果中读一条知识作为深挖上下文
+  var scenarioName = document.getElementById('s1-scenario-name')?.value || currentPipeline?.scenario || '';
+  var scenarioContent = document.getElementById('s1-scenario-content')?.value || '';
+  var knowledgeItem = {
+    knowledge_id: 'KN-' + (currentPipeline?.id || 'p').substring(0, 8) + '-001',
+    '知识描述': scenarioContent || scenarioName || '当前流水线场景知识',
+    '知识分类': '判断规则',
+    '适用条件': '',
+    '判断逻辑': '',
+  };
+  openInterviewProbe(knowledgeItem);
+}
+
+async function openInterviewProbe(knowledgeItem) {
+  // knowledgeItem: { 知识描述, 知识分类, 适用条件, 判断逻辑, knowledge_id, ... }
+  _interviewCtx.knowledge = knowledgeItem;
+  _interviewCtx.method = 'case_reverse';
+  _interviewCtx.probes = [];
+  document.getElementById('interview-modal').classList.add('active');
+  document.getElementById('interview-body').innerHTML = '<div class="interview-loading">选择访谈方法后点击「生成追问」</div>';
+  renderInterviewMethodTabs();
+  await generateInterviewProbes();
+}
+
+function renderInterviewMethodTabs() {
+  var body = document.getElementById('interview-body');
+  var methods = [
+    { id: 'case_reverse', name: '案例反推', desc: '构造反例场景，追问专家会如何判断' },
+    { id: 'contrast_probe', name: '对比追问', desc: '构造相似但不同的场景，找规则真正边界' },
+    { id: 'limit_hypothesis', name: '极限假设', desc: '推到极限条件，找出规则失效边界' },
+  ];
+  var tabsHtml = '<div class="interview-method-tabs">';
+  methods.forEach(function (m) {
+    tabsHtml += '<button class="interview-method-tab' + (_interviewCtx.method === m.id ? ' active' : '') + '" onclick="switchInterviewMethod(\'' + m.id + '\')">' + m.name + '</button>';
+  });
+  tabsHtml += '</div><div id="interview-probes-container"></div>';
+  body.innerHTML = tabsHtml;
+}
+
+async function switchInterviewMethod(method) {
+  _interviewCtx.method = method;
+  renderInterviewMethodTabs();
+  await generateInterviewProbes();
+}
+
+async function generateInterviewProbes() {
+  var container = document.getElementById('interview-probes-container');
+  if (!container) return;
+  container.innerHTML = '<div class="interview-loading"><div class="spinner"></div>生成追问中...</div>';
+
+  var model = resolveModelName('s2-model') || resolveModelName('s3-model');
+  if (!model) { container.innerHTML = '<div class="interview-loading" style="color:var(--error)">请先配置模型</div>'; return; }
+
+  try {
+    var resp = await fetch(API_BASE + '/api/interview/probe', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ method: _interviewCtx.method, knowledge: _interviewCtx.knowledge, model: model }),
+    });
+    var data = await resp.json();
+    if (data.status === 'ok' && data.probes) {
+      _interviewCtx.probes = data.probes;
+      renderInterviewProbes();
+    } else {
+      container.innerHTML = '<div class="interview-loading" style="color:var(--error)">' + escapeHtml(data.error || '生成失败') + '</div>';
+    }
+  } catch (e) {
+    container.innerHTML = '<div class="interview-loading" style="color:var(--error)">网络错误: ' + escapeHtml(e.message) + '</div>';
+  }
+}
+
+function renderInterviewProbes() {
+  var container = document.getElementById('interview-probes-container');
+  if (!container) return;
+  var html = '<div class="interview-probe-list">';
+  _interviewCtx.probes.forEach(function (p, i) {
+    html += '<div class="interview-probe-card">';
+    html += '<div class="interview-probe-q">' + escapeHtml(p.question) + '<span class="interview-probe-cat">' + escapeHtml(p.category || '经验判断') + '</span></div>';
+    if (p.hint) html += '<div class="interview-probe-hint">💡 ' + escapeHtml(p.hint) + '</div>';
+    html += '<textarea class="interview-probe-answer" id="interview-answer-' + i + '" placeholder="输入你的回答..."></textarea>';
+    html += '</div>';
+  });
+  html += '</div>';
+  container.innerHTML = html;
+}
+
+function saveInterviewAnswers() {
+  if (!_interviewCtx.probes.length) { showToast('请先生成追问', 'error'); return; }
+  if (!currentPipeline) { showToast('请先从总览进入一条流水线', 'error'); return; }
+
+  var annotations = [];
+  _interviewCtx.probes.forEach(function (p, i) {
+    var ans = document.getElementById('interview-answer-' + i);
+    if (ans && ans.value.trim()) {
+      annotations.push({
+        note_id: 'interview_' + Date.now() + '_' + i,
+        action: 'supplement',
+        knowledge_id: _interviewCtx.knowledge.knowledge_id || _interviewCtx.knowledge['知识编号'] || '',
+        category: p.category || '经验判断',
+        question: p.question,
+        answer: ans.value.trim(),
+      });
+    }
+  });
+
+  if (!annotations.length) { showToast('请至少回答一条追问', 'error'); return; }
+
+  // 保存到当前流水线的 step_data.tacit_annotations
+  currentPipeline.step_data = currentPipeline.step_data || {};
+  var existing = currentPipeline.step_data.step4_tacit_annotations || [];
+  currentPipeline.step_data.step4_tacit_annotations = existing.concat(annotations);
+  persistPipeline({ step4_tacit_annotations: currentPipeline.step_data.step4_tacit_annotations }).then(function () {
+    showToast('已保存 ' + annotations.length + ' 条隐性注释');
+    closeInterviewModal();
+  }).catch(function () {
+    showToast('保存失败', 'error');
+  });
+}
+
+function closeInterviewModal() {
+  document.getElementById('interview-modal').classList.remove('active');
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// 方案四: 显性化校验回放
+// ═══════════════════════════════════════════════════════════════════
+
+function openValidatePanel() {
+  var panel = document.getElementById('s5-validate-panel');
+  panel.classList.toggle('hidden');
+  if (!panel.classList.contains('hidden')) {
+    if (allModels.length) refreshModelSelects();
+  }
+}
+
+async function runValidateReplay() {
+  var btn = document.getElementById('s5-validate-run-btn');
+  var resultEl = document.getElementById('s5-validate-result');
+  var text = document.getElementById('s5-validate-cases').value.trim();
+  if (!text) { showToast('请输入历史案例', 'error'); return; }
+  if (!currentPipeline) { showToast('请先进入一条流水线', 'error'); return; }
+
+  // 解析案例文本
+  var lines = text.split('\n').filter(function (l) { return l.trim(); });
+  var cases = [];
+  lines.forEach(function (line) {
+    var parts = line.split(/[,，]/);
+    if (parts.length >= 3) {
+      cases.push({
+        case_id: parts[0].trim(),
+        description: parts[1].trim(),
+        conclusion: parts[2].trim(),
+      });
+    }
+  });
+  if (cases.length === 0) { showToast('案例格式错误，每行为: 案例ID,场景描述,专家结论', 'error'); return; }
+
+  var model = document.getElementById('s5-validate-model')?.value || resolveModelName('s5-model');
+  if (!model) { showToast('请选择模型', 'error'); return; }
+
+  btn.disabled = true; btn.textContent = '校验中...';
+  resultEl.innerHTML = '<div class="loading"><div class="spinner"></div>正在用知识库判断 ' + cases.length + ' 个案例...</div>';
+
+  try {
+    var fd = new FormData();
+    fd.append('pipeline_id', currentPipeline.id);
+    fd.append('model', model);
+    fd.append('cases', JSON.stringify(cases));
+    var resp = await fetch(API_BASE + '/api/validate/replay', { method: 'POST', body: fd });
+    var data = await resp.json();
+    if (data.status === 'ok') {
+      var pct = Math.round(data.hit_rate * 100);
+      var fillColor = pct >= 80 ? '#16a34a' : pct >= 60 ? '#f59e0b' : '#ef4444';
+      var html = '<div class="validate-result">';
+      html += '<h4>校验结果</h4>';
+      html += '<div style="font-size:24px;font-weight:700;color:' + fillColor + '">' + pct + '% 命中率</div>';
+      html += '<div style="font-size:12px;color:var(--text-muted)">' + data.hits + '/' + data.total + ' 一致 · ' + data.mismatch_count + ' 分歧</div>';
+      html += '<div class="validate-hit-bar"><div class="validate-hit-fill" style="width:' + pct + '%;background:' + fillColor + '"></div></div>';
+      if (data.mismatches && data.mismatches.length) {
+        html += '<h4 style="margin-top:12px;">分歧案例</h4>';
+        data.mismatches.forEach(function (m) {
+          html += '<div class="validate-mismatch"><strong>' + escapeHtml(m.case_id) + '</strong>: LLM判「' + escapeHtml(m.prediction) + '」→ 专家判「' + escapeHtml(m.expert_conclusion) + '」<br><span style="color:var(--text-muted);font-size:11px">推理: ' + escapeHtml((m.reasoning || '').substring(0, 120)) + '</span></div>';
+        });
+        html += '<div class="file-hint" style="margin-top:8px">💡 这些分歧条目可反推为 Step3 修订建议来源</div>';
+      }
+      html += '</div>';
+      resultEl.innerHTML = html;
+    } else {
+      resultEl.innerHTML = '<div style="color:var(--error);font-size:12px;margin-top:8px">' + escapeHtml(data.error || '校验失败') + '</div>';
+    }
+  } catch (e) {
+    resultEl.innerHTML = '<div style="color:var(--error);font-size:12px;margin-top:8px">网络错误: ' + escapeHtml(e.message) + '</div>';
+  }
+  btn.disabled = false; btn.textContent = '执行校验';
+}
 
 // Load pipeline overview on startup
 loadPipelineOverview();

@@ -633,6 +633,23 @@ fetch('/api/version').then(function(r){return r.json()}).then(function(v){
                 </button>
                 <div class="file-hint" style="margin-top:4px">检测知识时效性、置信度衰减和被案例突破的规则</div>
               </div>
+              <div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--border);">
+                <div class="file-hint" style="margin-bottom:6px">🔍 显性化校验</div>
+                <button class="action-btn small-btn secondary-btn" id="s5-validate-btn" onclick="openValidatePanel()" style="width:100%;justify-content:center;">
+                  ⚡ 显性化校验回放
+                </button>
+                <div class="file-hint" style="margin-top:4px">上传历史案例，用知识库判断，与专家结论比对命中率</div>
+                <div class="validate-section hidden" id="s5-validate-panel">
+                  <div class="file-hint">输入历史案例（每行格式：案例ID，场景描述，专家结论）</div>
+                  <textarea id="s5-validate-cases" rows="4" placeholder="CASE-001，芯片设计企业成立1年申请授信500万，通过&#10;CASE-002，传统制造企业成立3年流水稳定申请续贷，通过&#10;CASE-003，贸易企业无抵押物但有关联担保申请授信，拒绝"></textarea>
+                  <div class="file-hint" style="margin-top:6px">选择模型后点击执行，系统将用知识库判断每个案例并与专家结论比对</div>
+                  <div class="form-group" style="margin-top:8px;">
+                    <select id="s5-validate-model"></select>
+                  </div>
+                  <button class="action-btn small" id="s5-validate-run-btn" onclick="runValidateReplay()">执行校验</button>
+                  <div id="s5-validate-result"></div>
+                </div>
+              </div>
             </div>
           </div>
           <!-- 输出 -->
@@ -692,6 +709,23 @@ fetch('/api/version').then(function(r){return r.json()}).then(function(v){
         <div class="md-pane-header">&#128065; 预览区</div>
         <div class="md-preview" id="markdown-preview"></div>
       </div>
+    </div>
+  </div>
+</div>
+
+<!-- Interview Probe Modal (方案三) -->
+<div class="interview-overlay" id="interview-modal">
+  <div class="interview-dialog">
+    <div class="interview-header">
+      <div class="interview-title">&#128269; 隐性知识深挖</div>
+      <button class="interview-close" onclick="closeInterviewModal()">&times;</button>
+    </div>
+    <div class="interview-body" id="interview-body">
+      <!-- rendered by JS -->
+    </div>
+    <div class="interview-footer">
+      <button class="action-btn secondary small" onclick="closeInterviewModal()">取消</button>
+      <button class="action-btn small" id="interview-save-btn" onclick="saveInterviewAnswers()">保存为隐性注释</button>
     </div>
   </div>
 </div>
