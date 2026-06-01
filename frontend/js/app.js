@@ -528,23 +528,49 @@ function restoreStepFormData(step, data) {
 function scheduleFormSave(step) {
   if (!currentPipeline) return;
   clearTimeout(_formSaveTimer);
+  _autoSaveUI('saving');
   _formSaveTimer = setTimeout(async () => {
-    const allForm = collectAllStepsFormData();
-    currentPipeline.step_data = currentPipeline.step_data || {};
-    let changed = false;
-    for (const [key, formData] of Object.entries(allForm)) {
-      if (JSON.stringify(currentPipeline.step_data[key]) !== JSON.stringify(formData)) {
-        currentPipeline.step_data[key] = formData;
-        changed = true;
-      }
-    }
-    if (!changed) return;
     try {
+      const allForm = collectAllStepsFormData();
+      currentPipeline.step_data = currentPipeline.step_data || {};
+      let changed = false;
+      for (const [key, formData] of Object.entries(allForm)) {
+        if (JSON.stringify(currentPipeline.step_data[key]) !== JSON.stringify(formData)) {
+          currentPipeline.step_data[key] = formData;
+          changed = true;
+        }
+      }
+      if (!changed) { _autoSaveUI('idle'); return; }
       await persistPipeline(allForm);
+      _autoSaveUI('saved');
     } catch (e) {
       console.error('Auto-save failed:', e);
+      _autoSaveUI('failed');
     }
   }, 1000);
+}
+
+let _autoSaveTimer = null;
+function _autoSaveUI(state) {
+  var el = document.getElementById('auto-save-indicator');
+  var txt = document.getElementById('auto-save-text');
+  if (!el || !txt) return;
+  clearTimeout(_autoSaveTimer);
+  el.className = 'auto-save-indicator ' + state + ' visible';
+  if (state === 'saving') { txt.textContent = '保存中...'; }
+  else if (state === 'saved') {
+    var now = new Date();
+    txt.textContent = '已保存 ' + now.getHours().toString().padStart(2,'0') + ':' + now.getMinutes().toString().padStart(2,'0');
+    _autoSaveTimer = setTimeout(function () { el.classList.remove('visible'); }, 3000);
+  }
+  else if (state === 'failed') {
+    txt.textContent = '保存失败，点击重试';
+    el.onclick = function () { scheduleFormSave(currentStep); };
+  }
+  else {
+    el.classList.remove('visible');
+    el.onclick = null;
+  }
 }
 
 function renderStepReadiness(elId, text, level) {
@@ -741,13 +767,43 @@ function updateStepProgress() {
       b.classList.add('done');
     }
   });
-  // Update connectors
   document.querySelectorAll('.step-connector').forEach((c, i) => {
     const stepNum = i + 1;
     c.classList.remove('done', 'reached');
     if (status[stepNum] === 'done') c.classList.add('done');
     else if (stepNum < cur) c.classList.add('reached');
   });
+}
+
+function renderPipelineProgressSummary(currentPanelStep) {
+  if (!currentPipeline || currentPanelStep === 0) {
+    document.querySelectorAll('.pipeline-progress-summary').forEach(function (el) { el.remove(); });
+    return;
+  }
+  const status = currentPipeline.step_status || {};
+  const steps = [
+    { n: 1, label: '场景锚定' },
+    { n: 2, label: '知识萃取' },
+    { n: 3, label: '知识对齐' },
+    { n: 4, label: '智能转化' },
+  ];
+  var html = '<div class="pipeline-progress-summary">';
+  steps.forEach(function (s, i) {
+    if (i > 0) html += '<span class="pp-arrow">&gt;</span>';
+    var cls = 'pp-step';
+    if (s.n === currentPanelStep) cls += ' current';
+    else if (status[s.n] === 'done') cls += ' done';
+    html += '<span class="' + cls + '">' + s.label + '</span>';
+  });
+  html += '</div>';
+
+  var activePanel = document.getElementById('panel-' + currentPanelStep);
+  if (!activePanel) return;
+  var threeCol = activePanel.querySelector('.three-col, .three-col-wide');
+  if (!threeCol) return;
+  var existing = activePanel.querySelector('.pipeline-progress-summary');
+  if (existing) existing.remove();
+  threeCol.insertAdjacentHTML('beforebegin', html);
 }
 
 function switchPanel(step) {
@@ -758,6 +814,8 @@ function switchPanel(step) {
   document.getElementById('panel-' + step).classList.add('active');
   // 切换面板后重新初始化列宽拖动
   if (App.initResizableColumns) { setTimeout(App.initResizableColumns, 100); }
+
+  renderPipelineProgressSummary(step);
 
   const navSteps = document.getElementById('nav-steps');
   const brandEl = document.getElementById('nav-brand');
@@ -2024,7 +2082,8 @@ async function step2SkillExtract() {
 
   btn._locked = true;
   btn.disabled = true;
-  btn.innerHTML = '<span class="action-icon">&#9203;</span> 执行中...';
+  btn.classList.add('loading');
+  btn.innerHTML = '执行中<span class="btn-estimate">· 通常 10-60s</span>';
   renderLoading('s2-output');
 
   const fd = new FormData();
@@ -2394,7 +2453,10 @@ async function step3GeneratePreview() {
   const model = document.getElementById('s3-model').value;
 
   const btn = document.getElementById('s3-revise-btn');
+  btn._locked = true;
   btn.disabled = true;
+  btn.classList.add('loading');
+  btn.innerHTML = '修订中<span class="btn-estimate">· 通常 15-60s</span>';
   btn.innerHTML = '<span class="action-icon">&#9203;</span> 处理中...';
   renderLoading('s3-output');
 
@@ -2619,10 +2681,18 @@ function updateAlignStats() {
     else if (st === 'edited') { edited++; accepted++; }
     else pending++;
   }
+  const total = _alignNotes.length;
+  const processed = accepted + rejected;
   document.getElementById('s3-accepted-count').textContent = accepted;
   document.getElementById('s3-rejected-count').textContent = rejected;
   document.getElementById('s3-pending-count').textContent = pending;
   document.getElementById('s3-edited-count').textContent = edited;
+
+  // Update toolbar progress
+  var reviewTitle = document.getElementById('s3-review-title');
+  if (reviewTitle) reviewTitle.textContent = `审核进度 ${processed}/${total}`;
+  var reviewCount = document.getElementById('s3-review-count');
+  if (reviewCount) reviewCount.textContent = `共 ${total} 条`;
 
   const applyBtn = document.getElementById('s3-apply-btn');
   if (applyBtn) applyBtn.disabled = (accepted === 0);

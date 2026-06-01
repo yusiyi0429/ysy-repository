@@ -38,6 +38,15 @@ a { color: var(--red); text-decoration: none; }
   font-size: 16px; font-weight: 700; color: var(--red);
   letter-spacing: 0.5px; white-space: nowrap; margin-right: 32px;
 }
+/* Auto-save indicator */
+.auto-save-indicator {
+  font-size: 11px; color: var(--text-muted); margin-right: 12px; display: flex; align-items: center; gap: 4px;
+  transition: color 0.2s; opacity: 0; pointer-events: none;
+}
+.auto-save-indicator.visible { opacity: 1; }
+.auto-save-indicator.saving { color: var(--warning); }
+.auto-save-indicator.saved { color: var(--success); }
+.auto-save-indicator.failed { color: var(--error); pointer-events: auto; cursor: pointer; text-decoration: underline; }
 /* Overview mode: hide nav-steps */
 .nav-steps { display: none; align-items: center; gap: 0; flex: 1; }
 .nav-steps.visible { display: flex; }
@@ -447,6 +456,47 @@ a { color: var(--red); text-decoration: none; }
 }
 .slide-subtitle { font-size: 13px; color: var(--text-secondary); }
 
+/* Pipeline progress summary bar (各步骤内展示流水线进度) */
+.pipeline-progress-summary {
+  display: flex; align-items: center; gap: 0; padding: 8px 20px;
+  background: #fff; border-bottom: 1px solid var(--border); flex-shrink: 0;
+}
+.pipeline-progress-summary .pp-step {
+  display: flex; align-items: center; gap: 6px; font-size: 11px; color: var(--text-muted);
+  white-space: nowrap; padding: 2px 8px; border-radius: 10px; transition: all 0.2s;
+}
+.pipeline-progress-summary .pp-step.done { color: var(--success); font-weight: 600; }
+.pipeline-progress-summary .pp-step.current { background: var(--step-color, var(--red)); color: #fff; font-weight: 600; }
+.pipeline-progress-summary .pp-dot {
+  width: 6px; height: 6px; border-radius: 50%; background: var(--border); flex-shrink: 0;
+}
+.pipeline-progress-summary .pp-dot.done { background: var(--success); }
+.pipeline-progress-summary .pp-arrow { color: var(--border); margin: 0 2px; font-size: 10px; flex-shrink: 0; }
+
+/* Step-color themes: each panel sets --step-color */
+#panel-1 { --step-color: #3491fa; }
+#panel-2 { --step-color: #7b61ff; }
+#panel-3 { --step-color: #f77234; }
+#panel-4 { --step-color: #0fc6c2; }
+
+/* Step-num box color per step */
+#panel-1 .step-num { color: var(--step-color); }
+#panel-2 .step-num { color: var(--step-color); }
+#panel-3 .step-num { color: var(--step-color); }
+#panel-4 .step-num { color: var(--step-color); }
+
+/* Subtitle tag per step */
+#panel-1 .subtitle-tag { background: var(--step-color); }
+#panel-2 .subtitle-tag { background: var(--step-color); }
+#panel-3 .subtitle-tag { background: var(--step-color); }
+#panel-4 .subtitle-tag { background: var(--step-color); }
+
+/* Col-center icon per step */
+#panel-1 .col-center .col-icon { background: var(--step-color); }
+#panel-2 .col-center .col-icon { background: var(--step-color); }
+#panel-3 .col-center .col-icon { background: var(--step-color); }
+#panel-4 .col-center .col-icon { background: var(--step-color); }
+
 /* 三列布局：Step 1/2/4 与 Step 3 统一，全部三列可见、可拖动调节 */
 .three-col, .three-col-wide {
   display: flex; align-items: stretch;
@@ -524,6 +574,16 @@ a { color: var(--red); text-decoration: none; }
 .action-btn:hover { background: var(--red-dark); transform: translateY(-1px); box-shadow: 0 2px 8px rgba(199,0,11,0.3); }
 .action-btn:active { transform: translateY(0); }
 .action-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; box-shadow: none; }
+.action-btn.loading {
+  background: var(--step-color, var(--red)); opacity: 0.85; cursor: wait;
+  position: relative; pointer-events: none;
+}
+.action-btn.loading::after {
+  content: ''; display: inline-block; width: 14px; height: 14px; margin-left: 6px;
+  border: 2px solid rgba(255,255,255,0.3); border-top-color: #fff;
+  border-radius: 50%; animation: spin 0.6s linear infinite;
+}
+.action-btn .btn-estimate { font-size: 11px; opacity: 0.7; margin-left: 4px; }
 .action-btn.secondary { background: #fff; color: var(--red); border: 1px solid var(--red); }
 .action-btn.secondary:hover { background: #fef2f2; }
 .action-icon { font-size: 12px; }
@@ -1690,6 +1750,7 @@ a { color: var(--red); text-decoration: none; }
   padding: 12px 16px; background: var(--bg-card); border: 1px solid var(--border);
   border-radius: var(--radius); margin-bottom: 12px; gap: 16px;
   box-shadow: var(--shadow);
+  position: sticky; top: 0; z-index: 20;
 }
 .align-toolbar-left { display: flex; align-items: center; gap: 12px; flex-shrink: 0; }
 .align-toolbar-title { font-size: 15px; font-weight: 700; color: var(--text); }
@@ -1745,6 +1806,10 @@ a { color: var(--red); text-decoration: none; }
   background: var(--border-light); border-radius: 4px; padding: 2px 8px;
   font-family: var(--font-mono);
 }
+.align-note-progress {
+  font-size: 11px; color: var(--step-color, var(--text-muted)); font-weight: 600; white-space: nowrap;
+}
+.align-note-card:focus-within { outline: 2px solid var(--step-color, var(--red-light)); outline-offset: -1px; }
 .align-note-action-tag {
   font-size: 11px; font-weight: 600; padding: 2px 10px; border-radius: 10px; color: #fff;
 }
@@ -1988,6 +2053,12 @@ a { color: var(--red); text-decoration: none; }
 .s2-skill-card-icon { font-size: 18px; }
 .s2-skill-card-name { font-size: 12px; font-weight: 700; color: var(--text); }
 .s2-skill-card-desc { font-size: 10px; color: var(--text-muted); }
+.s2-skill-card-hint {
+  font-size: 10px; color: var(--text-muted); margin-top: 2px; display: none;
+  line-height: 1.4; text-align: center;
+}
+.s2-skill-card:hover .s2-skill-card-hint,
+.s2-skill-card.active .s2-skill-card-hint { display: block; }
 .s2-conditional { }
 .s2-info-card {
   display: flex; align-items: flex-start; gap: 10px; padding: 10px 12px;

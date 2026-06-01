@@ -41,7 +41,10 @@ fetch('/api/version').then(function(r){return r.json()}).then(function(v){
         <span class="step-connector"></span>
         <button class="step-btn" data-step="4"><span class="btn-num">04</span>智能转化</button>
       </div>
-      <span class="nav-action-divider"></span>
+      <span class="auto-save-indicator" id="auto-save-indicator">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="12" height="12"><polyline points="20 6 9 17 4 12"/></svg>
+        <span id="auto-save-text"></span>
+      </span>
       <button class="nav-action-btn" id="save-pipeline-btn" onclick="saveCurrentPipeline()" title="保存当前流水线">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
         保存
@@ -342,16 +345,19 @@ fetch('/api/version').then(function(r){return r.json()}).then(function(v){
                     <span class="s2-skill-card-icon">🔍</span>
                     <span class="s2-skill-card-name">知识萃取</span>
                     <span class="s2-skill-card-desc">文档→结构化知识</span>
+                    <span class="s2-skill-card-hint">制度文件、操作手册、案例复盘</span>
                   </div>
                   <div class="s2-skill-card" data-skill="knowledge-pattern-mining" onclick="selectStep2Skill('knowledge-pattern-mining')">
                     <span class="s2-skill-card-icon">🔬</span>
                     <span class="s2-skill-card-name">模式发现</span>
                     <span class="s2-skill-card-desc">跨案例交叉分析</span>
+                    <span class="s2-skill-card-hint">≥2 个相关案例的对比分析</span>
                   </div>
                   <div class="s2-skill-card" data-skill="knowledge-gap-analysis" onclick="selectStep2Skill('knowledge-gap-analysis')">
                     <span class="s2-skill-card-icon">🎯</span>
                     <span class="s2-skill-card-name">盲区检测</span>
                     <span class="s2-skill-card-desc">Schema覆盖率</span>
+                    <span class="s2-skill-card-hint">已萃取后检查知识覆盖空白</span>
                   </div>
                 </div>
                 <select id="s2-skill-select" class="hidden">
