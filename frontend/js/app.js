@@ -2082,6 +2082,7 @@ async function step2SkillExtract() {
 
   btn._locked = true;
   btn.disabled = true;
+  const origBtnHtml = btn.innerHTML;
   btn.classList.add('loading');
   btn.innerHTML = '执行中<span class="btn-estimate">· 通常 10-60s</span>';
   renderLoading('s2-output');
@@ -2241,7 +2242,7 @@ async function step2SkillExtract() {
   } finally {
     btn.disabled = false;
     btn._locked = false;
-    btn.innerHTML = '<span class="action-icon">&#9654;</span> 执行';
+    btn.innerHTML = origBtnHtml;
   }
 }
 
@@ -2293,15 +2294,21 @@ function showTacitFollowup(noteEl, noteId, actionType) {
   // 已有追问卡片则跳过
   if (noteEl.querySelector('.tacit-followup')) return;
   var question = TACIT_FOLLOWUP_QUESTIONS[actionType] || '能分享一下这次修订背后的经验吗？';
+  var safeNoteId = String(noteId).replace(/[^\w-]/g, '');
+  var safeActionType = String(actionType).replace(/[^\w-]/g, '');
+  var safeQuestion = String(question).replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/"/g, '&quot;').replace(/</g, '&lt;');
   var card = document.createElement('div');
   card.className = 'tacit-followup';
   card.innerHTML =
     '<div class="tacit-followup-label">💡 ' + escapeHtml(question) + '</div>' +
-    '<textarea id="tacit-answer-' + noteId + '" placeholder="写几句话就行，哪怕只是「当时感觉不对」也比留空有信息量..."></textarea>' +
+    '<textarea id="tacit-answer-' + safeNoteId + '" placeholder="写几句话就行，哪怕只是「当时感觉不对」也比留空有信息量..."></textarea>' +
     '<div class="tacit-followup-actions">' +
       '<button class="tacit-followup-skip" onclick="dismissTacitFollowup(this)">跳过</button>' +
-      '<button class="tacit-followup-save" onclick="saveTacitAnnotation(\'' + noteId + '\', \'' + escapeHtml(actionType) + '\', \'' + escapeHtml(question) + '\')">保存隐性注释</button>' +
+      '<button class="tacit-followup-save" data-note-id="' + safeNoteId + '" data-action-type="' + safeActionType + '" data-question="' + safeQuestion + '">保存隐性注释</button>' +
     '</div>';
+  card.querySelector('.tacit-followup-save').addEventListener('click', function() {
+    saveTacitAnnotation(this.dataset.noteId, this.dataset.actionType, this.dataset.question);
+  });
   noteEl.appendChild(card);
 }
 
@@ -2456,7 +2463,6 @@ async function step3GeneratePreview() {
   btn._locked = true;
   btn.disabled = true;
   btn.classList.add('loading');
-  btn.innerHTML = '修订中<span class="btn-estimate">· 通常 15-60s</span>';
   btn.innerHTML = '<span class="action-icon">&#9203;</span> 处理中...';
   renderLoading('s3-output');
 
@@ -2470,16 +2476,9 @@ async function step3GeneratePreview() {
   } else if (!finalMessage && cachedExpertFile) {
     fd.append('expert_cached_file', cachedExpertFile);
   }
-  // #region agent log
-  fetch('http://127.0.0.1:7620/ingest/373a0517-ca00-4a54-8abb-05f50a475736',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'5b6690'},body:JSON.stringify({sessionId:'5b6690',runId:'run-1',hypothesisId:'H1',location:'frontend/js/app.js:step3GeneratePreview:before_fetch',message:'step3 preview submit',data:{hasPid:!!pid,style:style||'',model:model||'',expertLen:(finalMessage||'').length,hasCached:!!cachedExpertFile},timestamp:Date.now()})}).catch(()=>{});
-  // #endregion
-
   try {
     const resp = await fetch(API_BASE + '/api/step4/align_chat', { method: 'POST', body: fd });
     const result = await resp.json();
-    // #region agent log
-    fetch('http://127.0.0.1:7620/ingest/373a0517-ca00-4a54-8abb-05f50a475736',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'5b6690'},body:JSON.stringify({sessionId:'5b6690',runId:'run-1',hypothesisId:'H1',location:'frontend/js/app.js:step3GeneratePreview:after_fetch',message:'step3 preview response',data:{status:result?.status||'',notesCount:Array.isArray(result?.notes)?result.notes.length:-1,error:result?.error||''},timestamp:Date.now()})}).catch(()=>{});
-    // #endregion
 
     if (result.status === 'ok') {
       if (Array.isArray(result.chat_history)) {
@@ -2771,9 +2770,6 @@ async function step3ApplyNotes() {
   }
 
   if (acceptedIds.length === 0) { alert('请至少采纳一条对齐建议'); return; }
-  // #region agent log
-  fetch('http://127.0.0.1:7620/ingest/373a0517-ca00-4a54-8abb-05f50a475736',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'5b6690'},body:JSON.stringify({sessionId:'5b6690',runId:'run-1',hypothesisId:'H3',location:'frontend/js/app.js:step3ApplyNotes:before_fetch',message:'step3 apply submit',data:{acceptedCount:acceptedIds.length,editedCount:editedNotes.length,stateSummary:Object.values(_alignNoteStates||{}).reduce((m,s)=>{m[s]=(m[s]||0)+1;return m;},{} )},timestamp:Date.now()})}).catch(()=>{});
-  // #endregion
 
   const btn = document.getElementById('s3-apply-btn');
   btn.disabled = true;
@@ -2786,9 +2782,6 @@ async function step3ApplyNotes() {
       body: JSON.stringify({ pipeline_id: pid, accepted_ids: acceptedIds, edited_notes: editedNotes, tacit_annotations: getTacitAnnotationsPayload() }),
     });
     const result = await resp.json();
-    // #region agent log
-    fetch('http://127.0.0.1:7620/ingest/373a0517-ca00-4a54-8abb-05f50a475736',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'5b6690'},body:JSON.stringify({sessionId:'5b6690',runId:'run-1',hypothesisId:'H3',location:'frontend/js/app.js:step3ApplyNotes:after_fetch',message:'step3 apply response',data:{status:result?.status||'',revisionCount:result?.revision_count??null,error:result?.error||''},timestamp:Date.now()})}).catch(()=>{});
-    // #endregion
 
     if (result.status === 'ok') {
       result.accepted_count = result.accepted_count || acceptedIds.length;
@@ -2936,9 +2929,6 @@ async function step5Compile() {
   if (!currentPipeline) { alert('请先进入流水线'); return; }
   const formats = getSelectedStep5Formats();
   if (!formats.length) { alert('请至少选择一种交付物类型'); return; }
-  // #region agent log
-  fetch('http://127.0.0.1:7620/ingest/373a0517-ca00-4a54-8abb-05f50a475736',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'5b6690'},body:JSON.stringify({sessionId:'5b6690',runId:'run-2',hypothesisId:'H6',location:'frontend/js/app.js:step5Compile:before_call',message:'step5 compile submit',data:{pipelineId:currentPipeline?.id||'',formats,step4Final:currentPipeline?.step_data?.step4_final_file||'',hasStepData:!!currentPipeline?.step_data},timestamp:Date.now()})}).catch(()=>{});
-  // #endregion
 
   renderLoading('s5-output');
   try {

@@ -1460,6 +1460,7 @@ def api_step5_compile():
             for p in pipelines:
                 if p["id"] == pipeline_id:
                     pipeline = dict(p)
+                    pipeline["step_data"] = dict(p.get("step_data", {}))
                     break
     if pipeline_id and not excel_file and pipeline:
             step_data = pipeline.get("step_data", {})
@@ -1647,6 +1648,7 @@ def api_step5_quality():
             for p in pipelines:
                 if p["id"] == pipeline_id:
                     pipeline = dict(p)
+                    pipeline["step_data"] = dict(p.get("step_data", {}))
                     break
         if pipeline:
             step_data = pipeline.get("step_data", {})
@@ -3505,8 +3507,8 @@ def _execute_knowledge_revision():
     )
     if not expert_text and expert_cached_file:
         try:
-            cached_path = WORKSPACE / expert_cached_file
-            if cached_path.exists():
+            cached_path = safe_workspace_path(WORKSPACE, expert_cached_file, must_exist=True)
+            if cached_path:
                 expert_text = extract_text_from_path(str(cached_path))
         except Exception:
             pass
@@ -4231,8 +4233,8 @@ def api_step4_finalize():
             expert_text = extract_text_from_file(expert_file)
     if not expert_text and expert_cached_file:
         try:
-            cached_path = WORKSPACE / expert_cached_file
-            if cached_path.exists():
+            cached_path = safe_workspace_path(WORKSPACE, expert_cached_file, must_exist=True)
+            if cached_path:
                 expert_text = extract_text_from_path(str(cached_path))
         except Exception:
             pass
@@ -4685,8 +4687,8 @@ def api_step4_align_preview():
             expert_text = extract_text_from_file(expert_file)
     if not expert_text and expert_cached_file:
         try:
-            cached_path = WORKSPACE / expert_cached_file
-            if cached_path.exists():
+            cached_path = safe_workspace_path(WORKSPACE, expert_cached_file, must_exist=True)
+            if cached_path:
                 expert_text = extract_text_from_path(str(cached_path))
         except Exception:
             pass

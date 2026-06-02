@@ -116,14 +116,17 @@
     if (btnEl._locked) return Promise.resolve();
     btnEl._locked = true;
     btnEl.disabled = true;
+    var origHtml = btnEl.innerHTML;
     try {
       return asyncFn().finally(function () {
         btnEl.disabled = false;
         btnEl._locked = false;
+        btnEl.innerHTML = origHtml;
       });
     } catch (e) {
       btnEl.disabled = false;
       btnEl._locked = false;
+      btnEl.innerHTML = origHtml;
       throw e;
     }
   }

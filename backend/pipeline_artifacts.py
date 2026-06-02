@@ -100,18 +100,11 @@ def resolve_knowledge_workbook_path(
     if not isinstance(step_data, dict):
         return None, ""
 
-    if purpose == "align":
-        candidates = (
-            ("step4_final_file", is_step4_final_filename),
-            ("step3_revision_file", is_step3_revision_filename),
-            ("step2_output_file", is_step2_preextract_filename),
-        )
-    else:
-        candidates = (
-            ("step4_final_file", is_step4_final_filename),
-            ("step3_revision_file", is_step3_revision_filename),
-            ("step2_output_file", is_step2_preextract_filename),
-        )
+    candidates = (
+        ("step4_final_file", is_step4_final_filename),
+        ("step3_revision_file", is_step3_revision_filename),
+        ("step2_output_file", is_step2_preextract_filename),
+    )
 
     for key, validator in candidates:
         raw = step_data.get(key, "")
